@@ -62,7 +62,7 @@ FFMPEG_OPTIONS: str = "-vn -b:a 128k -bufsize 256k"
 #   [acodec=opus]: prefer Opus codec (native Discord codec)
 #   [ext=webm]:    prefer WebM container (avoids re-mux overhead)
 YTDL_FORMAT_OPTIONS: dict = {
-    "format": "bestaudio/best",
+    "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best",
     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
     "noplaylist": True,          # single-video extraction (playlists handled manually)
@@ -74,10 +74,7 @@ YTDL_FORMAT_OPTIONS: dict = {
     "default_search": "ytsearch",  # treat bare queries as YouTube searches
     "source_address": "0.0.0.0",   # bind to all interfaces (IPv4/IPv6 safe)
     "extract_flat": False,
-    "skip_download": True,         # stream in-place; never download to disk
-    "extractor_args": {
-        "youtube": ["player_client=android,ios,web"]
-    }
+    "skip_download": True          # stream in-place; never download to disk
 }
 
 # ── YouTube Cookies ───────────────────────────────────────────
