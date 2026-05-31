@@ -71,7 +71,7 @@ YTDL_FORMAT_OPTIONS: dict = {
     "logtostderr": False,
     "quiet": True,
     "no_warnings": True,
-    "default_search": "ytsearch",  # treat bare queries as YouTube searches
+    "default_search": "scsearch",  # use SoundCloud for bare queries to bypass YouTube datacenter blocks
     "source_address": "0.0.0.0",   # bind to all interfaces (IPv4/IPv6 safe)
     "extract_flat": False,
     "skip_download": True          # stream in-place; never download to disk

@@ -120,8 +120,8 @@ class YTDLSource:
         Run yt-dlp extraction in a thread executor and return the info dict.
         Handles the 'ytsearch:' prefix automatically for bare queries.
         """
-        # If the query looks like a plain search term (not a URL), prefix it.
-        search_query = query if query.startswith(("http", "ytsearch:")) else f"ytsearch:{query}"
+        # If the query looks like a plain search term (not a URL), prefix it with scsearch.
+        search_query = query if query.startswith(("http", "ytsearch:", "scsearch:")) else f"scsearch:{query}"
 
         partial = functools.partial(
             cls._ytdl.extract_info, search_query, download=False
