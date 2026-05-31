@@ -129,6 +129,7 @@ class YTDLSource:
         try:
             data = await loop.run_in_executor(None, partial)
         except yt_dlp.utils.DownloadError as exc:
+            log.exception("yt-dlp extraction failed completely for query: %s", search_query)
             raise ValueError(f"yt-dlp extraction failed: {exc}") from exc
 
         if data is None:
