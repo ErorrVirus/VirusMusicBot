@@ -120,26 +120,63 @@ class YTDLSource:
         Run yt-dlp extraction in a thread executor and return the info dict.
         Handles the 'ytsearch:' prefix automatically for bare queries.
         """
-        # If the query looks like a plain search term (not a URL), prefix it with scsearch.
-        search_query = query if query.startswith(("http", "ytsearch:", "scsearch:")) else f"scsearch:{query}"
+        # 1. If it's a YouTube URL, extract the title first using a flat extractor to bypass Datacenter bans
+        if "youtube.com/" in query or "youtu.be/" in query:
+            flat_ytdl = yt_dlp.YoutubeDL({"extract_flat": True, "quiet": True, "no_warnings": True})
+            partial_flat = functools.partial(flat_ytdl.extract_info, query, download=False)
+            try:
+                flat_data = await loop.run_in_executor(None, partial_flat)
+                if flat_data and "title" in flat_data:
+                    query = flat_data["title"]  # Replace the URL with the video title
+            except Exception as e:
+                log.warning("Failed to extract flat title from YouTube URL %s: %s", query, e)
 
-        partial = functools.partial(
-            cls._ytdl.extract_info, search_query, download=False
-        )
+        # 2. If it's a direct URL (not YouTube), try to extract it normally
+        if query.startswith("http"):
+            partial = functools.partial(cls._ytdl.extract_info, query, download=False)
+            try:
+                data = await loop.run_in_executor(None, partial)
+                return data
+            except yt_dlp.utils.DownloadError as exc:
+                log.exception("yt-dlp extraction failed for URL: %s", query)
+                raise ValueError(f"yt-dlp extraction failed: {exc}") from exc
+
+        # 3. It's a text search (or became one). Use SoundCloud search and get top 5 results
+        search_query = query.replace("scsearch:", "") if query.startswith("scsearch:") else query
+        search_query = search_query.replace("ytsearch:", "") if query.startswith("ytsearch:") else search_query
+        
+        flat_ytdl = yt_dlp.YoutubeDL({"extract_flat": True, "quiet": True, "no_warnings": True})
+        partial_search = functools.partial(flat_ytdl.extract_info, f"scsearch5:{search_query}", download=False)
+        
         try:
-            data = await loop.run_in_executor(None, partial)
-        except yt_dlp.utils.DownloadError as exc:
-            log.exception("yt-dlp extraction failed completely for query: %s", search_query)
-            raise ValueError(f"yt-dlp extraction failed: {exc}") from exc
+            search_data = await loop.run_in_executor(None, partial_search)
+        except Exception as e:
+            raise ValueError(f"Failed to search SoundCloud: {e}") from e
 
-        if data is None:
-            raise ValueError("yt-dlp returned no data for the given query.")
+        if not search_data or "entries" not in search_data:
+            raise ValueError("No results found for the given query.")
 
-        # When a search result set is returned, take the first entry
-        if "entries" in data:
-            entries = [e for e in data["entries"] if e]
-            if not entries:
-                raise ValueError("No results found for the given query.")
-            data = entries[0]
+        entries = [e for e in search_data["entries"] if e]
+        if not entries:
+            raise ValueError("No results found for the given query.")
 
-        return data
+        # 4. Iterate through the top 5 results and try to extract streams. 
+        # This bypasses SoundCloud Go+ DRM tracks by skipping them and trying the next result!
+        last_exc = None
+        for entry in entries:
+            track_url = entry.get("url")
+            if not track_url:
+                continue
+                
+            partial = functools.partial(cls._ytdl.extract_info, track_url, download=False)
+            try:
+                data = await loop.run_in_executor(None, partial)
+                return data  # Success! Found a track without DRM that has streams.
+            except yt_dlp.utils.DownloadError as exc:
+                # Log it as debug and try the next one
+                log.debug("Skipping track %s due to extraction error (likely DRM): %s", track_url, exc)
+                last_exc = exc
+                continue
+        
+        # If we exhausted all 5 results and all failed
+        raise ValueError(f"Failed to extract any playable streams from the top 5 results. Last error: {last_exc}")
