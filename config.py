@@ -71,11 +71,18 @@ YTDL_FORMAT_OPTIONS: dict = {
     "logtostderr": False,
     "quiet": True,
     "no_warnings": True,
-    "default_search": "ytsearch",  # treat bare queries as YouTube searches
+    "default_search": "ytmsearch",  # treat bare queries as YouTube Music searches
     "source_address": "0.0.0.0",   # bind to all interfaces (IPv4/IPv6 safe)
     "extract_flat": False,
     "skip_download": True,         # stream in-place; never download to disk
 }
+
+# ── YouTube Cookies ───────────────────────────────────────────
+# If we provided YouTube cookies via an environment variable (for Render),
+# write them out to a cookies.txt file so yt-dlp can read them.
+if os.environ.get("YOUTUBE_COOKIES"):
+    with open("cookies.txt", "w", encoding="utf-8") as f:
+        f.write(os.environ["YOUTUBE_COOKIES"])
 
 # If cookies.txt exists in the working directory, tell yt-dlp to use it
 if os.path.exists("cookies.txt"):
