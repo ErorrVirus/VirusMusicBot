@@ -75,8 +75,11 @@ YTDL_FORMAT_OPTIONS: dict = {
     "source_address": "0.0.0.0",   # bind to all interfaces (IPv4/IPv6 safe)
     "extract_flat": False,
     "skip_download": True,         # stream in-place; never download to disk
-    "cookiesfrombrowser": None,    # set to ("chrome",) if age-restricted videos fail
 }
+
+# If cookies.txt exists in the working directory, tell yt-dlp to use it
+if os.path.exists("cookies.txt"):
+    YTDL_FORMAT_OPTIONS["cookiefile"] = "cookies.txt"
 
 # ── Embed Colours ─────────────────────────────────────────────
 COLOR_PRIMARY = 0x1DB954   # Spotify green — used for "now playing"

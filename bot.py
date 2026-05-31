@@ -8,12 +8,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
+import os
 
 import discord
 from discord.ext import commands
 import keep_alive
 
 from config import DISCORD_TOKEN
+
+# ── Write YouTube Cookies to File ──────────────────────────────
+# If we provided YouTube cookies via an environment variable (for Render),
+# write them out to a cookies.txt file so yt-dlp can read them.
+if os.environ.get("YOUTUBE_COOKIES"):
+    with open("cookies.txt", "w", encoding="utf-8") as f:
+        f.write(os.environ["YOUTUBE_COOKIES"])
 
 # ── Logging Setup ─────────────────────────────────────────────
 # Format: [LEVEL] YYYY-MM-DD HH:MM:SS | module_name | message
