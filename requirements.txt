@@ -5,7 +5,7 @@
 discord.py[voice]>=2.3.2
 
 # YouTube audio extraction and downloading
-yt-dlp>=2026.3.17
+git+https://github.com/yt-dlp/yt-dlp.git@master
 
 # Spotify API client
 spotipy>=2.23.0

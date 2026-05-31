@@ -74,10 +74,7 @@ YTDL_FORMAT_OPTIONS: dict = {
     "default_search": "ytsearch",  # treat bare queries as YouTube searches
     "source_address": "0.0.0.0",   # bind to all interfaces (IPv4/IPv6 safe)
     "extract_flat": False,
-    "skip_download": True,         # stream in-place; never download to disk
-    "extractor_args": {
-        "youtube": ["player_client=tv,mweb,android,ios,web"]
-    }
+    "skip_download": True          # stream in-place; never download to disk
 }
 
 # ── YouTube Cookies ───────────────────────────────────────────
