@@ -15,12 +15,16 @@ import subprocess
 try:
     subprocess.run(["node", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except (subprocess.CalledProcessError, FileNotFoundError):
-    print("Node.js not found! Installing via nodeenv to support yt-dlp signature decryption...")
-    try:
-        subprocess.run([sys.executable, "-m", "nodeenv", "-p"], check=True)
-        print("Node.js successfully installed into the python environment.")
-    except Exception as e:
-        print(f"Failed to install Node.js: {e}")
+    if not os.path.exists("node_env"):
+        print("Node.js not found! Installing locally via nodeenv to support yt-dlp signature decryption...")
+        try:
+            subprocess.run([sys.executable, "-m", "nodeenv", "node_env"], check=True)
+            print("Node.js successfully installed.")
+        except Exception as e:
+            print(f"Failed to install Node.js: {e}")
+    
+    # Add node_env to PATH so yt-dlp can find it
+    os.environ["PATH"] = f"{os.path.abspath('node_env/bin')}{os.pathsep}{os.path.abspath('node_env/Scripts')}{os.pathsep}{os.environ.get('PATH', '')}"
 
 import discord
 from discord.ext import commands
