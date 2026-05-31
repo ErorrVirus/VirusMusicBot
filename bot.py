@@ -9,6 +9,18 @@ import asyncio
 import logging
 import sys
 import os
+import subprocess
+
+# ── Ensure Node.js is installed for yt-dlp JS execution ───
+try:
+    subprocess.run(["node", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+except (subprocess.CalledProcessError, FileNotFoundError):
+    print("Node.js not found! Installing via nodeenv to support yt-dlp signature decryption...")
+    try:
+        subprocess.run([sys.executable, "-m", "nodeenv", "-p"], check=True)
+        print("Node.js successfully installed into the python environment.")
+    except Exception as e:
+        print(f"Failed to install Node.js: {e}")
 
 import discord
 from discord.ext import commands
