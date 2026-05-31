@@ -75,6 +75,9 @@ YTDL_FORMAT_OPTIONS: dict = {
     "source_address": "0.0.0.0",   # bind to all interfaces (IPv4/IPv6 safe)
     "extract_flat": False,
     "skip_download": True,         # stream in-place; never download to disk
+    "extractor_args": {
+        "youtube": ["player_client=default"]
+    }
 }
 
 # ── YouTube Cookies ───────────────────────────────────────────
