@@ -183,7 +183,7 @@ class GuildPlayer:
                         source_label=track.source,
                     )
                 except Exception as exc:  # noqa: BLE001
-                    log.error("Failed to resolve track '%s': %s", track.title, exc)
+                    log.exception("Failed to resolve track '%s'", track.title)
                     await self._send_error(
                         f"⚠️ Could not resolve **{track.title}** — skipping."
                     )
