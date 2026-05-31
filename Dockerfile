@@ -4,9 +4,9 @@ FROM python:3.11-slim
 # Set the working directory
 WORKDIR /app
 
-# Install ffmpeg and required system packages
+# Install ffmpeg, git, and required system packages
 RUN apt-get update && \
-    apt-get install -y ffmpeg && \
+    apt-get install -y ffmpeg git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
