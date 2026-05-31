@@ -1,0 +1,45 @@
+# Git ignore file for VirusMusicPro
+# ─────────────────────────────────
+
+# Environment secrets — NEVER commit these
+.env
+
+# Python bytecode cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment directories
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# IDE project files
+.vscode/
+.idea/
+*.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# yt-dlp temporary files
+*.part
+*.ytdl
+
+# Audio files that may be cached locally
+*.webm
+*.mp3
+*.m4a
+*.ogg

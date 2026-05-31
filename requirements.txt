@@ -1,0 +1,20 @@
+# Discord Music Bot - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core Discord library (with voice support)
+discord.py[voice]>=2.3.2
+
+# YouTube audio extraction and downloading
+yt-dlp>=2024.1.0
+
+# Spotify API client
+spotipy>=2.23.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# Async HTTP client (used internally by discord.py and yt-dlp)
+aiohttp>=3.9.0
+
+# PyNaCl for voice encryption (required by discord.py voice)
+PyNaCl>=1.5.0
