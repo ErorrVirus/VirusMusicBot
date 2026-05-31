@@ -71,12 +71,12 @@ YTDL_FORMAT_OPTIONS: dict = {
     "logtostderr": False,
     "quiet": True,
     "no_warnings": True,
-    "default_search": "scsearch",  # treat bare queries as SoundCloud searches
+    "default_search": "ytmsearch",  # treat bare queries as YouTube Music searches
     "source_address": "0.0.0.0",   # bind to all interfaces (IPv4/IPv6 safe)
     "extract_flat": False,
     "skip_download": True,         # stream in-place; never download to disk
     "extractor_args": {
-        "youtube": ["player_client=tv,android,ios"]
+        "youtube": ["player_client=android,ios", "player_skip=js"]
     }
 }
 

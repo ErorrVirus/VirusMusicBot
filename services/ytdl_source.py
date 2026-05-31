@@ -121,7 +121,7 @@ class YTDLSource:
         Handles the 'ytsearch:' prefix automatically for bare queries.
         """
         # If the query looks like a plain search term (not a URL), prefix it.
-        search_query = query if query.startswith(("http", "ytsearch:", "ytmsearch:", "scsearch:")) else f"scsearch:{query}"
+        search_query = query if query.startswith(("http", "ytsearch:", "ytmsearch:", "scsearch:")) else f"ytmsearch:{query}"
 
         partial = functools.partial(
             cls._ytdl.extract_info, search_query, download=False
