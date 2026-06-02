@@ -1,5 +1,5 @@
 const { Connectors } = require("shoukaku");
-const { Kazagumo, Plugins } = require("kazagumo");
+const { Kazagumo, Plugins, KazagumoTrack } = require("kazagumo");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 class LavalinkManager {
@@ -68,9 +68,15 @@ class LavalinkManager {
                                 deaf: true
                             });
                             // Re-add tracks
-                            if (row.current_track) player.queue.add(row.current_track);
+                            if (row.current_track) {
+                                const raw = typeof row.current_track === 'string' ? JSON.parse(row.current_track) : row.current_track;
+                                player.queue.add(new KazagumoTrack(raw, null));
+                            }
                             if (row.queue) {
-                                for(const track of row.queue) player.queue.add(track);
+                                const queueArray = typeof row.queue === 'string' ? JSON.parse(row.queue) : row.queue;
+                                for(const track of queueArray) {
+                                    player.queue.add(new KazagumoTrack(track, null));
+                                }
                             }
                             if(!player.playing && player.queue.current) player.play();
                             console.log(`[Auto-Resume] Resumed player for guild ${row.guild_id}`);

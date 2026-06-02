@@ -4,7 +4,6 @@ services:
     container_name: virusmusic_bot
     restart: unless-stopped
     working_dir: /app
-    network_mode: "host"
     depends_on:
       - lavalink
       - postgres
@@ -17,7 +16,7 @@ services:
       node src/shard.js"
     environment:
       - PORT=3005
-      - LAVALINK_HOST=127.0.0.1
+      - LAVALINK_HOST=lavalink
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -25,13 +24,12 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-      - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@127.0.0.1:5432/virusmusic
-      - REDIS_URL=redis://127.0.0.1:6379
+      - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@postgres:5432/virusmusic
+      - REDIS_URL=redis://redis:6379
 
   lavalink_init:
     image: alpine
     container_name: virusmusic_lavalink_init
-    network_mode: "host"
     volumes:
       - lavalink_data:/opt/Lavalink
     command: >
@@ -42,7 +40,6 @@ services:
     image: ghcr.io/lavalink-devs/lavalink:4.0.8
     container_name: virusmusic_lavalink
     restart: unless-stopped
-    network_mode: "host"
     depends_on:
       lavalink_init:
         condition: service_completed_successfully
@@ -59,7 +56,6 @@ services:
     image: postgres:16-alpine
     container_name: virusmusic_postgres
     restart: unless-stopped
-    network_mode: "host"
     environment:
       - POSTGRES_USER=virusmusic
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
@@ -71,7 +67,6 @@ services:
     image: redis:7-alpine
     container_name: virusmusic_redis
     restart: unless-stopped
-    network_mode: "host"
     volumes:
       - ./data/redis:/data
 
@@ -79,14 +74,13 @@ services:
     image: alpine
     container_name: virusmusic_backup
     restart: unless-stopped
-    network_mode: "host"
     depends_on:
       - postgres
     environment:
       - POSTGRES_USER=virusmusic
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
       - POSTGRES_DB=virusmusic
-      - POSTGRES_HOST=127.0.0.1
+      - POSTGRES_HOST=postgres
     volumes:
       - ./backups:/backups
     command: >
