@@ -13,7 +13,7 @@ plugins:
     clients:
       - TVHTML5_SIMPLY
       - ANDROID_VR
-      - WEBEMBEDDED
+      - MUSIC
       - WEB
     oauth:
       enabled: false
