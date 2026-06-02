@@ -1,8 +1,12 @@
 # Git ignore file for VirusMusicPro
-# ─────────────────────────────────
+# ==========================================================
 
-# Environment secrets — NEVER commit these
+# Environment secrets - NEVER commit these
 .env
+cookies.txt
+*cookie*.txt
+.cache
+.cache-*
 
 # Python bytecode cache
 __pycache__/
