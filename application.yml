@@ -14,7 +14,6 @@ plugins:
       - TVHTML5_SIMPLY
       - IOS
       - ANDROID_VR
-      - MUSIC
     oauth:
       enabled: false
   lavasrc:
