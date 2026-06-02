@@ -25,6 +25,14 @@ class LavalinkManager {
             }));
         }
 
+        const shoukakuOptions = {
+            moveOnDisconnect: false,
+            resumable: false,
+            resumableTimeout: 30,
+            reconnectTries: 20,
+            restTimeout: 60000
+        };
+
         this.manager = new Kazagumo({
             defaultSearchEngine: "youtube",
             plugins: plugins,
@@ -32,7 +40,7 @@ class LavalinkManager {
                 const guild = client.guilds.cache.get(guildId);
                 if (guild) guild.shard.send(payload);
             }
-        }, new Connectors.DiscordJS(client), Nodes);
+        }, new Connectors.DiscordJS(client), Nodes, shoukakuOptions);
 
         this.manager.shoukaku.on("ready", (name) => console.log(`Lavalink Node: ${name} is now connected`));
         this.manager.shoukaku.on("error", (name, error) => console.error(`Lavalink Node: ${name} threw an error:`, error));
