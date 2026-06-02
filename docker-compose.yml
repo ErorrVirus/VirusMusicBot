@@ -7,7 +7,6 @@ services:
     container_name: virusmusic_bot
     restart: unless-stopped
     working_dir: /app
-    network_mode: "host"
     depends_on:
       lavalink:
         condition: service_healthy
@@ -25,7 +24,7 @@ services:
       node src/index.js"
     environment:
       - PORT=3000
-      - LAVALINK_HOST=127.0.0.1
+      - LAVALINK_HOST=lavalink
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -48,7 +47,6 @@ services:
     image: ghcr.io/lavalink-devs/lavalink:4.0.5
     container_name: virusmusic_lavalink
     restart: unless-stopped
-    network_mode: "host"
     depends_on:
       lavalink_init:
         condition: service_completed_successfully
