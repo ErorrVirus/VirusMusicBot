@@ -44,7 +44,7 @@ services:
       lavalink_init:
         condition: service_completed_successfully
     environment:
-      - _JAVA_OPTIONS=-Xmx1G
+      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true
       - SERVER_PORT=2333
       - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
     volumes:
