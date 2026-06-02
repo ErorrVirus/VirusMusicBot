@@ -16,7 +16,7 @@ plugins:
       - WEB
       - TVHTML5_SIMPLY
     oauth:
-      enabled: true
+      enabled: false
   lavasrc:
     providers:
       - "ytsearch:\"%ISRC%\""

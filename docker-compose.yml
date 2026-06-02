@@ -33,23 +33,11 @@ services:
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
 
-  # This container downloads your application.yml configuration for Lavalink!
-  lavalink_init:
-    image: alpine
-    container_name: virusmusic_lavalink_init
-    volumes:
-      - lavalink_data:/opt/Lavalink
-    command: >
-      sh -c "apk add --no-cache wget && 
-      wget -O /opt/Lavalink/application.yml https://raw.githubusercontent.com/ErorrVirus/VirusMusicBot/main/application.yml"
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.0.5
     container_name: virusmusic_lavalink
     restart: unless-stopped
-    depends_on:
-      lavalink_init:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO /dev/null --header=\"Authorization: $$LAVALINK_SERVER_PASSWORD\" http://127.0.0.1:2333/version || exit 1"]
       interval: 10s
@@ -64,5 +52,6 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
     volumes:
       - lavalink_data:/opt/Lavalink
+      - ./application.yml:/opt/Lavalink/application.yml:ro
 volumes:
   lavalink_data:
