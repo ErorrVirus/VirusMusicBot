@@ -136,8 +136,18 @@ class YTDLSource:
             except yt_dlp.utils.DownloadError as exc:
                 log.warning("yt-dlp extraction failed for URL %s: %s", query, exc)
                 # If YouTube extraction completely fails (e.g. 403, geoblock), we attempt a search fallback
-                # Try to use the URL itself as the search term, or fallback gracefully
-                pass
+                if "youtube.com" in query or "youtu.be" in query:
+                    log.warning("YouTube direct extraction failed, attempting to get title for fallback search...")
+                    partial_flat = functools.partial(cls._flat_ytdl.extract_info, query, download=False)
+                    try:
+                        flat_data = await loop.run_in_executor(None, partial_flat)
+                        if flat_data and "title" in flat_data:
+                            query = flat_data["title"]
+                            log.info("Extracted title for fallback: %s", query)
+                    except Exception as e:
+                        log.warning("Failed to extract title for fallback: %s", e)
+                else:
+                    raise ValueError(f"yt-dlp extraction failed: {exc}") from exc
 
         # 2. Text Search - Prioritize YouTube Search
         search_query = query.replace("ytsearch:", "").replace("scsearch:", "").strip()
@@ -177,7 +187,8 @@ class YTDLSource:
         # Iterate through the top 5 results and filter aggressively
         last_exc = None
         for entry in entries:
-            track_url = entry.get("url")
+            # Prefer webpage_url over api url to prevent 401s when users click the link
+            track_url = entry.get("webpage_url") or entry.get("url")
             if not track_url:
                 continue
 
