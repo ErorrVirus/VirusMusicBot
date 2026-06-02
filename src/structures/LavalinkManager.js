@@ -1,7 +1,5 @@
 const { Connectors } = require("shoukaku");
 const { Kazagumo, Plugins } = require("kazagumo");
-const Spotify = require("kazagumo-spotify");
-
 class LavalinkManager {
     constructor(client) {
         this.client = client;
@@ -14,16 +12,6 @@ class LavalinkManager {
         }];
 
         const plugins = [new Plugins.PlayerMoved(client)];
-
-        if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
-            plugins.push(new Spotify({
-                clientId: process.env.SPOTIFY_CLIENT_ID,
-                clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-                playlistPageLimit: 1, // Optional: limit pages to prevent huge queues
-                albumPageLimit: 1,
-                searchMarket: 'US'
-            }));
-        }
 
         const shoukakuOptions = {
             moveOnDisconnect: false,
