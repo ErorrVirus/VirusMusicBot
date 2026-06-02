@@ -61,11 +61,6 @@ client.once("ready", async () => {
     console.log(`Logged in as ${client.user.tag}`);
     client.application.commands.set(client.commands.map(cmd => cmd.data));
     console.log(`Registered ${client.commands.size} slash commands.`);
-
-    // 5. Initialize Lavalink Manager
-    if (!client.manager) {
-        client.manager = new LavalinkManager(client).manager;
-    }
 });
 
 client.on("interactionCreate", async interaction => {
@@ -112,6 +107,9 @@ client.on("interactionCreate", async interaction => {
         }
     }
 });
+
+// 5. Initialize Lavalink Manager (Must be BEFORE client.login)
+client.manager = new LavalinkManager(client).manager;
 
 // 6. Login
 client.login(process.env.DISCORD_TOKEN);
