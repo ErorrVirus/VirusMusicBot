@@ -12,9 +12,9 @@ plugins:
     allowDirectPlaylistIds: true
     clients:
       - TVHTML5_SIMPLY
+      - IOS
       - ANDROID_VR
       - MUSIC
-      - WEB
     oauth:
       enabled: false
   lavasrc:
