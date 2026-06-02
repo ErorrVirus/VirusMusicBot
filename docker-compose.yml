@@ -38,6 +38,7 @@ services:
   lavalink_init:
     image: alpine
     container_name: virusmusic_lavalink_init
+    network_mode: "host"
     volumes:
       - lavalink_data:/opt/Lavalink
     command: >
