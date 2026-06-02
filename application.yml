@@ -14,10 +14,8 @@ plugins:
       - MUSIC
       - ANDROID_VR
       - WEB
-      - TVHTML5EMBEDDED
     oauth:
       enabled: true
-      refreshToken: ${YOUTUBE_REFRESH_TOKEN:""}
   lavasrc:
     providers:
       - "ytsearch:\"%ISRC%\""
