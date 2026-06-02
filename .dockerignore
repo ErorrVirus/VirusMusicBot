@@ -1,0 +1,17 @@
+.git
+.gitignore
+.venv
+venv
+env
+ENV
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+.cache
+.cache-*
+.env
+cookies.txt
+*cookie*.txt
+node_env
+node_modules
