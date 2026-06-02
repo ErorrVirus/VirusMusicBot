@@ -1,46 +1,77 @@
-# VirusMusicPro (Node.js + Lavalink v4)
+# VirusMusicPro
 
-A complete, production-ready Discord Music Bot built with `discord.js` v14, `Lavalink v4`, and `Kazagumo`. 
-This project is fully structured to be deployed easily on **Render.com's Free Tier** using Docker.
+A robust, production-ready Discord Music Bot utilizing Discord.js v14, Shoukaku, Kazagumo, and Lavalink v4. 
+Designed specifically for deployment on TrueNAS SCALE (25.04) and Docker environments.
 
 ## Features
-- **YouTube Playback**: Search and play YouTube via the Lavalink v4 YouTube Plugin.
-- **Spotify Support**: Extracts metadata from Spotify links and plays audio via YouTube fallback seamlessly.
-- **Queue System**: Robust song queue management.
-- **Modern Commands**: Uses Discord.js v14 Slash Commands.
-- **Render Ready**: Includes a Dockerfile that starts both Java (Lavalink) and Node.js on a single Render Web Service, bound to a dummy port to keep Render happy.
+- **YouTube Support:** High quality playback via the latest Lavalink YouTube plugin.
+- **Spotify Integration:** Convert Spotify Tracks, Albums, and Playlists directly into playback streams without requiring a premium Spotify account.
+- **SoundCloud Fallback:** Native support for SoundCloud bypassing strict YouTube IP blocks.
+- **Slash Commands Only:** Modern Discord interface.
+- **Auto-Reconnect:** Rock solid stability with auto-resume functionality.
+- **Docker Ready:** Built to run cleanly in Docker Compose with zero manual installations.
 
-## 🚀 Setup & Deployment
+## Requirements
+- A server capable of running Docker Compose (e.g. TrueNAS SCALE, Ubuntu, etc.)
+- At least 1GB of RAM for the Java Lavalink server.
 
-### 1. GitHub Setup
-1. Upload this exact folder structure to a new GitHub repository.
+## Installation Guide (TrueNAS SCALE & Docker)
 
-### 2. Render.com Deployment
-1. Go to [Render.com](https://render.com) and create a new **Web Service**.
-2. Connect your GitHub repository.
-3. **Environment Settings**:
-   - Environment: `Docker`
-   - Branch: `main`
-4. **Environment Variables**:
-   Under the "Environment" section in Render, add the following variables:
-   - `DISCORD_TOKEN`: Your bot token from Discord Developer Portal.
-   - `SPOTIFY_CLIENT_ID`: (Optional) For Spotify link support.
-   - `SPOTIFY_CLIENT_SECRET`: (Optional) For Spotify link support.
-   - `LAVALINK_HOST`: `127.0.0.1`
-   - `LAVALINK_PORT`: `2333`
-   - `LAVALINK_PASSWORD`: `youshallnotpass`
-5. Click **Deploy**. Render will automatically build the Dockerfile, install Java & Node.js, and boot up both the Lavalink Server and your Discord Bot!
+### 1. Discord Developer Portal Setup
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Click **New Application** and give it a name.
+3. Go to the **Bot** tab, click **Reset Token**, and copy your `DISCORD_TOKEN`.
+4. Scroll down and enable **Message Content Intent**, **Server Members Intent**, and **Presence Intent**.
+5. Go to the **OAuth2 > General** tab, copy your `CLIENT_ID`.
+6. Go to **OAuth2 > URL Generator**.
+7. Select scopes: `bot` and `applications.commands`.
+8. Select bot permissions: `Send Messages`, `Embed Links`, `Connect`, `Speak`, `Use Voice Activity`.
+9. Copy the generated URL and paste it in your browser to invite the bot to your server.
 
-## Local Development
-If you want to run this locally:
-1. Ensure you have **Node.js 20+** and **Java 17+** installed.
-2. Download `Lavalink.jar` (v4.0.5) and place it in the root folder.
-3. Run `npm install`.
-4. Copy `.env.example` to `.env` and fill in your keys.
-5. In one terminal, run: `java -jar Lavalink.jar`
-6. In another terminal, run: `npm start`
+### 2. Spotify API Setup (Required)
+1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/).
+2. Log in and click **Create app**.
+3. Name it "Discord Bot", set a description, and put `http://localhost` as the Redirect URI.
+4. Go to the app's settings.
+5. Copy your **Client ID** and **Client Secret**.
 
-## Architecture
-- **Discord Bot (Node.js)**: Receives slash commands and manages voice channel state using `discord.js` + `shoukaku`.
-- **Lavalink Manager (Kazagumo)**: Handles queue logic, Spotify parsing, and track resolution.
-- **Lavalink Server (Java)**: The heavy lifter that downloads audio streams from YouTube/SoundCloud and sends them via WebSocket to the Discord voice channels.
+### 3. Server Deployment
+1. Clone this repository to your TrueNAS dataset.
+```bash
+git clone https://github.com/ErorrVirus/VirusMusicBot.git
+cd VirusMusicBot
+```
+
+2. Create your `.env` file from the example:
+```bash
+cp .env.example .env
+```
+
+3. Edit the `.env` file with your preferred text editor (e.g., `nano .env`) and fill in the variables using the tokens you gathered above.
+
+4. Start the stack:
+```bash
+docker compose up -d
+```
+
+5. The first startup will take a moment as Docker pulls the Node.js and Lavalink images. You can monitor the logs using:
+```bash
+docker compose logs -f
+```
+
+## Troubleshooting & Common Errors
+
+### Lavalink Not Connecting
+Ensure `LAVALINK_HOST` in your `.env` is set to `lavalink` (which resolves to the Docker Compose service name), and that `LAVALINK_PASSWORD` matches exactly what is in the `.env` file. 
+
+### Bot Online but No Audio / YouTube Blocks
+YouTube aggressively blocks Datacenter IPs. This project is configured to completely bypass YouTube by default, routing all queries and Spotify lookups through **SoundCloud** instead. Do not change the `lavasrc` configuration in `application.yml` unless you have a dedicated residential proxy.
+
+### Spotify Links Not Working
+If Spotify links fail instantly, double check your `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in your `.env` file. Lavalink requires these to fetch the metadata.
+
+### Slash Commands Not Appearing
+Slash commands can take up to an hour to cache globally. If you want them instantly, set `GUILD_ID` in your `.env` file to your specific Discord Server ID.
+
+### Docker Startup Failures
+If the `lavalink` container crashes on TrueNAS, ensure your server has enough RAM available. Java requires at least 1GB of memory. You can adjust the memory limit by changing `-Xmx1G` in `docker-compose.yml` to `-Xmx512m` if you are on a severely constrained system.
