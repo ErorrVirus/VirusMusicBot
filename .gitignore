@@ -3,6 +3,7 @@ node_env/
 __pycache__/
 venv/
 .env
+cookies.txt
 .DS_Store
 logs
 Lavalink.jar
