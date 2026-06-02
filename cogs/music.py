@@ -159,15 +159,16 @@ class MusicCog(commands.Cog, name="Music"):
                 "Please wait for some tracks to finish before adding more.",
             )
         except Exception as exc:  # noqa: BLE001
-            log.exception("Error in /play for guild %d", interaction.guild_id)
             err_msg = str(exc)
             if any(err in err_msg for err in ["Requested format is not available", "Video unavailable", "Sign in to confirm", "YouTube blocked the link"]):
+                log.warning("YouTube blocked the bot in guild %d: %s", interaction.guild_id, exc)
                 err_msg = (
                     "**YouTube blocked the bot from playing this specific URL.** 🚫\n"
                     "**Fix:** Instead of pasting the YouTube link, just type the **name of the song**! "
                     "(e.g., `/play FUNK INFERNAL`). The bot will use SoundCloud to bypass the block."
                 )
             else:
+                log.exception("Error in /play for guild %d", interaction.guild_id)
                 err_msg = f"❌ Something went wrong: `{exc}`"
                 
             await self._followup_error(interaction, err_msg)
