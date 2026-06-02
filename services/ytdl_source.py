@@ -134,21 +134,45 @@ class YTDLSource:
                     log.info("Successfully extracted direct URL: %s", query)
                     return data
             except yt_dlp.utils.DownloadError as exc:
-                log.warning("yt-dlp extraction failed for URL %s: %s", query, exc)
+                original_was_url = query.startswith("http")
+                youtube_blocked = False
+                
                 # If YouTube extraction completely fails (e.g. 403, geoblock), we attempt a search fallback
                 if "youtube.com" in query or "youtu.be" in query:
                     log.warning("YouTube direct extraction failed, attempting to get title for fallback search...")
-                    partial_flat = functools.partial(cls._flat_ytdl.extract_info, query, download=False)
+                    youtube_blocked = True
+                    
+                    # Try oEmbed API first (never blocked by Bot Verification on Datacenters)
+                    import urllib.parse
+                    import aiohttp
+                    
+                    oembed_url = f"https://www.youtube.com/oembed?url={urllib.parse.quote(query)}&format=json"
+                    extracted_title = None
                     try:
-                        flat_data = await loop.run_in_executor(None, partial_flat)
-                        if flat_data and "title" in flat_data:
-                            query = flat_data["title"]
-                            log.info("Extracted title for fallback: %s", query)
-                        else:
-                            raise ValueError("YouTube blocked the link (Bot verification) and the title could not be extracted for fallback.")
-                    except Exception as e:
-                        log.warning("Failed to extract title for fallback: %s", e)
-                        raise ValueError(f"YouTube blocked the link and title could not be extracted: {exc}") from exc
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(oembed_url, timeout=5) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    extracted_title = data.get("title")
+                    except Exception as oembed_exc:
+                        log.warning("oEmbed fallback failed: %s", oembed_exc)
+                        
+                    if extracted_title:
+                        query = extracted_title
+                        log.info("Extracted title via oEmbed for fallback: %s", query)
+                    else:
+                        # Fallback to flat extraction if oEmbed somehow fails
+                        partial_flat = functools.partial(cls._flat_ytdl.extract_info, query, download=False)
+                        try:
+                            flat_data = await loop.run_in_executor(None, partial_flat)
+                            if flat_data and "title" in flat_data:
+                                query = flat_data["title"]
+                                log.info("Extracted title via yt-dlp for fallback: %s", query)
+                            else:
+                                raise ValueError("YouTube blocked the link (Bot verification) and the title could not be extracted for fallback.")
+                        except Exception as e:
+                            log.warning("Failed to extract title for fallback: %s", e)
+                            raise ValueError(f"YouTube blocked the link and title could not be extracted: {exc}") from exc
                 else:
                     raise ValueError(f"yt-dlp extraction failed: {exc}") from exc
 
@@ -157,18 +181,21 @@ class YTDLSource:
         is_remix_query = "remix" in search_query.lower()
         is_cover_query = "cover" in search_query.lower()
         
-        # Try YouTube search first
-        yt_search_str = f"ytsearch1:{search_query}"
-        partial_yt = functools.partial(cls._ytdl.extract_info, yt_search_str, download=False)
-        try:
-            yt_data = await loop.run_in_executor(None, partial_yt)
-            if yt_data and "entries" in yt_data and yt_data["entries"]:
-                entry = yt_data["entries"][0]
-                if entry:
-                    log.info("Successfully extracted via YouTube search: %s", search_query)
-                    return entry
-        except Exception as e:
-            log.warning("YouTube search failed for %s: %s", search_query, e)
+        # Try YouTube search first (unless YouTube is actively blocking us)
+        if not locals().get("youtube_blocked", False):
+            yt_search_str = f"ytsearch1:{search_query}"
+            partial_yt = functools.partial(cls._ytdl.extract_info, yt_search_str, download=False)
+            try:
+                yt_data = await loop.run_in_executor(None, partial_yt)
+                if yt_data and "entries" in yt_data and yt_data["entries"]:
+                    entry = yt_data["entries"][0]
+                    if entry:
+                        log.info("Successfully extracted via YouTube search: %s", search_query)
+                        return entry
+            except Exception as e:
+                log.warning("YouTube search failed for %s: %s", search_query, e)
+        else:
+            log.info("Skipping YouTube search because YouTube blocked the initial URL extraction.")
 
         # 3. Fallback to SoundCloud
         log.info("Falling back to SoundCloud search for: %s", search_query)
