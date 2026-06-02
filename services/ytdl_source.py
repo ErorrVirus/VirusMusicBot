@@ -144,8 +144,11 @@ class YTDLSource:
                         if flat_data and "title" in flat_data:
                             query = flat_data["title"]
                             log.info("Extracted title for fallback: %s", query)
+                        else:
+                            raise ValueError("YouTube blocked the link (Bot verification) and the title could not be extracted for fallback.")
                     except Exception as e:
                         log.warning("Failed to extract title for fallback: %s", e)
+                        raise ValueError(f"YouTube blocked the link and title could not be extracted: {exc}") from exc
                 else:
                     raise ValueError(f"yt-dlp extraction failed: {exc}") from exc
 

@@ -161,7 +161,7 @@ class MusicCog(commands.Cog, name="Music"):
         except Exception as exc:  # noqa: BLE001
             log.exception("Error in /play for guild %d", interaction.guild_id)
             err_msg = str(exc)
-            if "Requested format is not available" in err_msg or "Video unavailable" in err_msg:
+            if any(err in err_msg for err in ["Requested format is not available", "Video unavailable", "Sign in to confirm", "YouTube blocked the link"]):
                 err_msg = (
                     "**YouTube blocked the bot from playing this specific URL.** 🚫\n"
                     "**Fix:** Instead of pasting the YouTube link, just type the **name of the song**! "

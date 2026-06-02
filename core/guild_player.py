@@ -189,7 +189,7 @@ class GuildPlayer:
                 except Exception as exc:  # noqa: BLE001
                     log.exception("Failed to resolve track '%s'", track.title)
                     err_msg = str(exc)
-                    if "Requested format is not available" in err_msg or "Video unavailable" in err_msg:
+                    if any(err in err_msg for err in ["Requested format is not available", "Video unavailable", "Sign in to confirm", "YouTube blocked the link"]):
                         await self._send_error(
                             f"⚠️ **YouTube blocked '{track.title}'** (Datacenter IP ban).\n"
                             "**Fix:** Please use the `/play` command and type the **song name** instead of pasting a YouTube link. We will use SoundCloud to bypass the block."
