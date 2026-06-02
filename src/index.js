@@ -51,6 +51,13 @@ for (const file of commandFiles) {
 
 // 4. Client Events
 client.once("ready", async () => {
+    // Initialize DB tables
+    try {
+        await db.init();
+    } catch(e) {
+        console.error('[Database] Failed to initialize schema:', e);
+    }
+
     console.log(`Logged in as ${client.user.tag}`);
     client.application.commands.set(client.commands.map(cmd => cmd.data));
     console.log(`Registered ${client.commands.size} slash commands.`);
