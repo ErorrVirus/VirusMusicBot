@@ -37,7 +37,8 @@ class LavalinkManager {
             moveOnDisconnect: false,
             resumable: true,
             resumableTimeout: 60,
-            reconnectTries: 20,
+            reconnectTries: 100, // 100 tries * 15 seconds = 25 minutes of patience
+            reconnectInterval: 15000,
             restTimeout: 60000
         };
 
