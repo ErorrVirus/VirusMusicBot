@@ -8,7 +8,10 @@ services:
       - lavalink
       - postgres
       - redis
-    network_mode: "host"
+    networks:
+      default:
+      my_macvlan:
+        ipv4_address: 192.168.1.201
     command: >
       sh -c "apk add --no-cache git && 
       rm -rf /app/* /app/.[!.]* /app/..?* &&
@@ -26,8 +29,8 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-      - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@127.0.0.1:5432/virusmusic
-      - REDIS_URL=redis://127.0.0.1:6379
+      - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@virusmusic_postgres:5432/virusmusic
+      - REDIS_URL=redis://virusmusic_redis:6379
 
   lavalink_init:
     image: alpine
@@ -61,7 +64,6 @@ services:
     image: postgres:16-alpine
     container_name: virusmusic_postgres
     restart: unless-stopped
-    network_mode: "host"
     environment:
       - POSTGRES_USER=virusmusic
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
@@ -73,7 +75,6 @@ services:
     image: redis:7-alpine
     container_name: virusmusic_redis
     restart: unless-stopped
-    network_mode: "host"
     volumes:
       - ./data/redis:/data
 
@@ -81,14 +82,13 @@ services:
     image: alpine
     container_name: virusmusic_backup
     restart: unless-stopped
-    network_mode: "host"
     depends_on:
       - postgres
     environment:
       - POSTGRES_USER=virusmusic
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
       - POSTGRES_DB=virusmusic
-      - POSTGRES_HOST=127.0.0.1
+      - POSTGRES_HOST=virusmusic_postgres
     volumes:
       - ./backups:/backups
     command: >
@@ -109,4 +109,4 @@ networks:
       config:
         - subnet: "192.168.1.0/24"
           gateway: "192.168.1.1"
-          ip_range: "192.168.1.200/32"
+          ip_range: "192.168.1.200/31"
