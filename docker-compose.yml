@@ -39,7 +39,7 @@ services:
       wget -O /opt/Lavalink/application.yml https://raw.githubusercontent.com/ErorrVirus/VirusMusicBot/main/application.yml"
 
   lavalink:
-    image: fredboat/lavalink:4.0.8
+    image: ghcr.io/lavalink-devs/lavalink:4.0.8
     container_name: virusmusic_lavalink
     restart: unless-stopped
     network_mode: "host"
