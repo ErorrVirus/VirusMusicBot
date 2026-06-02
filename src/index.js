@@ -5,11 +5,22 @@ const path = require("path");
 const LavalinkManager = require("./structures/LavalinkManager");
 const express = require("express");
 
-// 1. Setup Render Keep-Alive Server
+// 1. Setup Healthcheck & Web Server (Pro Version)
 const app = express();
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 3000;
+
 app.get("/", (req, res) => res.send("VirusMusicPro is running!"));
-app.listen(port, () => console.log(`Dummy server listening on port ${port} for Render`));
+app.get("/health", (req, res) => res.status(200).send("OK"));
+
+const server = app.listen(port, () => {
+    console.log(`[HTTP] Health server listening on port ${port}`);
+}).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`[ERROR] Port ${port} is already in use. The bot will continue without the web server.`);
+    } else {
+        console.error(`[ERROR] Web server failed:`, err);
+    }
+});
 
 // 2. Initialize Discord Client
 const client = new Client({
