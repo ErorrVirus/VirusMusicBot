@@ -1,26 +1,29 @@
-# Use the official Python 3.11 slim image
-FROM python:3.11-slim
+FROM node:20-bullseye
 
-# Set the working directory
-WORKDIR /app
-
-# Install ffmpeg, git, and required system packages
+# Install Java 17 for Lavalink
 RUN apt-get update && \
-    apt-get install -y ffmpeg git && \
-    apt-get clean && \
+    apt-get install -y openjdk-17-jre-headless wget && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+# Set working directory
+WORKDIR /app
 
-# Install the Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Download Lavalink v4
+# Using 4.0.5 as it is a highly stable v4 release
+RUN wget https://github.com/lavalink-devs/Lavalink/releases/download/4.0.5/Lavalink.jar -O Lavalink.jar
 
-# Copy the rest of the bot's code
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install --production
+
+# Copy application code and config
 COPY . .
 
-# Expose the port that UptimeRobot will ping (Render sets PORT dynamically, but defaults to 8080)
-EXPOSE 8080
+# Make the start script executable
+RUN chmod +x start.sh
 
-# Command to run the bot
-CMD ["python", "bot.py"]
+# Expose Render dummy port
+EXPOSE 10000
+
+# Start script handles both Lavalink and Node.js
+CMD ["./start.sh"]

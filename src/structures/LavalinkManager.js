@@ -1,0 +1,59 @@
+const { Connectors } = require("shoukaku");
+const { Kazagumo, Plugins } = require("kazagumo");
+const Spotify = require("kazagumo-spotify");
+
+class LavalinkManager {
+    constructor(client) {
+        this.client = client;
+
+        const Nodes = [{
+            name: "LocalNode",
+            url: `${process.env.LAVALINK_HOST || "127.0.0.1"}:${process.env.LAVALINK_PORT || "2333"}`,
+            auth: process.env.LAVALINK_PASSWORD || "youshallnotpass",
+            secure: false
+        }];
+
+        const plugins = [new Plugins.PlayerMoved(client)];
+
+        if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
+            plugins.push(new Spotify({
+                clientId: process.env.SPOTIFY_CLIENT_ID,
+                clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+                playlistPageLimit: 1, // Optional: limit pages to prevent huge queues
+                albumPageLimit: 1,
+                searchMarket: 'US'
+            }));
+        }
+
+        this.manager = new Kazagumo({
+            defaultSearchEngine: "youtube",
+            plugins: plugins,
+            send: (guildId, payload) => {
+                const guild = client.guilds.cache.get(guildId);
+                if (guild) guild.shard.send(payload);
+            }
+        }, new Connectors.DiscordJS(client), Nodes);
+
+        this.manager.shoukaku.on("ready", (name) => console.log(`Lavalink Node: ${name} is now connected`));
+        this.manager.shoukaku.on("error", (name, error) => console.error(`Lavalink Node: ${name} threw an error:`, error));
+        this.manager.shoukaku.on("close", (name, code, reason) => console.log(`Lavalink Node: ${name} closed with code ${code}. Reason: ${reason || "No reason"}`));
+        this.manager.shoukaku.on("disconnect", (name, count) => console.log(`Lavalink Node: ${name} disconnected. Reconnect attempts: ${count}`));
+
+        this.manager.on("playerStart", (player, track) => {
+            const channel = client.channels.cache.get(player.textId);
+            if (channel) {
+                channel.send(`🎵 Now playing: **${track.title}** by **${track.author}**`);
+            }
+        });
+
+        this.manager.on("playerEmpty", player => {
+            const channel = client.channels.cache.get(player.textId);
+            if (channel) {
+                channel.send(`Queue ended. Disconnecting...`);
+            }
+            player.destroy();
+        });
+    }
+}
+
+module.exports = LavalinkManager;

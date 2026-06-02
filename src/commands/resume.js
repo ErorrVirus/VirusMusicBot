@@ -1,0 +1,26 @@
+const { SlashCommandBuilder } = require('discord.js');
+
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('resume')
+        .setDescription('Resume the paused song'),
+    async execute(interaction, client) {
+        const player = client.manager.players.get(interaction.guild.id);
+        
+        if (!player || !player.queue.current) {
+            return interaction.reply({ content: 'I am not playing anything!', ephemeral: true });
+        }
+
+        const memberVoice = interaction.member.voice.channelId;
+        if (!memberVoice || memberVoice !== player.voiceId) {
+            return interaction.reply({ content: 'You must be in the same voice channel as me!', ephemeral: true });
+        }
+
+        if (!player.paused) {
+            return interaction.reply({ content: 'The music is not paused!', ephemeral: true });
+        }
+
+        player.pause(false);
+        return interaction.reply({ content: '▶️ Resumed the music.' });
+    }
+};
