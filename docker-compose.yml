@@ -17,6 +17,7 @@ services:
       node src/shard.js"
     environment:
       - PORT=3005
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
       - LAVALINK_HOST=127.0.0.1
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}

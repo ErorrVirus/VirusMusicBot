@@ -24,12 +24,20 @@ class LavalinkManager {
             };
         };
 
-        const Nodes = [{
-            name: "LocalNode",
-            url: `${process.env.LAVALINK_HOST || "127.0.0.1"}:${process.env.LAVALINK_PORT || "2333"}`,
-            auth: process.env.LAVALINK_PASSWORD || "youshallnotpass",
-            secure: false
-        }];
+        const Nodes = [
+            {
+                name: "Public-Lavalink-Fallback",
+                url: "lava-v4.ajieblogs.eu.org:443",
+                auth: "https://dsc.gg/ajidevserver",
+                secure: true
+            },
+            {
+                name: "LocalNode",
+                url: `${process.env.LAVALINK_HOST || "127.0.0.1"}:${process.env.LAVALINK_PORT || "2333"}`,
+                auth: process.env.LAVALINK_PASSWORD || "youshallnotpass",
+                secure: false
+            }
+        ];
 
         const plugins = [new Plugins.PlayerMoved(client)];
 
