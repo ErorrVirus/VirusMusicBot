@@ -246,6 +246,7 @@ class MusicCog(commands.Cog, name="Music"):
                     thumbnail=meta.thumbnail,
                     requester=track.requester,
                     source=track.source,
+                    original_query=meta.search_query,
                 )
             player.enqueue(track)
             await self._followup_queued(interaction, track)
@@ -262,6 +263,7 @@ class MusicCog(commands.Cog, name="Music"):
                     thumbnail=meta.thumbnail,
                     requester=requester,
                     source="spotify",
+                    original_query=f"ytsearch:{meta.search_query}",
                 )
                 try:
                     player.enqueue(placeholder)

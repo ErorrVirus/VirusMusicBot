@@ -39,6 +39,9 @@ MAX_QUEUE_SIZE: int = int(os.getenv("MAX_QUEUE_SIZE", "200"))
 # ── Inactivity Auto-disconnect ───────────────────────────────
 INACTIVITY_TIMEOUT: int = int(os.getenv("INACTIVITY_TIMEOUT", "300"))
 
+# ── Playback Retries ─────────────────────────────────────────
+MAX_RETRIES: int = int(os.getenv("MAX_RETRIES", "3"))
+
 # ── FFmpeg Audio Options ─────────────────────────────────────
 # before_options: passed to ffmpeg BEFORE the input specifier
 #   -reconnect            → reconnect on drop
@@ -54,7 +57,8 @@ FFMPEG_BEFORE_OPTIONS: str = (
 #   -vn     → disable video (audio-only)
 #   -b:a    → target audio bitrate
 #   -bufsize → buffer size for smoother streaming
-FFMPEG_OPTIONS: str = "-vn -b:a 128k -bufsize 256k"
+#   -af aresample=async=1000 → prevents stream desynchronization
+FFMPEG_OPTIONS: str = "-vn -b:a 128k -bufsize 512k -af aresample=async=1000"
 
 # ── yt-dlp Extraction Options ────────────────────────────────
 # format: prefer opus inside webm (lowest latency for Discord)
@@ -71,7 +75,7 @@ YTDL_FORMAT_OPTIONS: dict = {
     "logtostderr": False,
     "quiet": True,
     "no_warnings": True,
-    "default_search": "scsearch",  # use SoundCloud for bare queries to bypass YouTube datacenter blocks
+    "default_search": "ytsearch",  # Default to YouTube search
     "source_address": "0.0.0.0",   # bind to all interfaces (IPv4/IPv6 safe)
     "extract_flat": False,
     "skip_download": True          # stream in-place; never download to disk

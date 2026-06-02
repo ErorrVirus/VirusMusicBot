@@ -76,7 +76,7 @@ def _build_spotify_client() -> spotipy.Spotify:
        only; playlists will return 401 and a helpful error is shown.
     """
     if SPOTIFY_REFRESH_TOKEN:
-        log.info("Spotify: using OAuth flow (full playlist/album support).")
+        log.info("Spotify: using OAuth flow (full playlist/album support). Refresh token is present.")
 
         # Pre-populate the in-memory cache with the refresh token.
         # expires_at=0 forces Spotipy to immediately exchange it for a
@@ -165,9 +165,11 @@ class SpotifyResolver:
             the resolver is in fallback (Client Credentials) mode.
         """
         url_type = self._url_type(url)
+        log.info("Resolving Spotify URL of type: %s", url_type)
 
         # Guard: playlists and albums require OAuth
         if url_type in ("playlist", "album") and not self._has_oauth:
+            log.warning("Spotify playlist/album request failed because OAuth is missing.")
             raise ValueError(
                 "Spotify playlists and albums require user authentication.\n"
                 "**Run `python spotify_auth.py` once** to generate a refresh token,\n"
@@ -176,24 +178,28 @@ class SpotifyResolver:
 
         try:
             if url_type == "track":
+                log.info("Fetching Spotify track metadata: %s", url)
                 return [self._resolve_track(url)]
             elif url_type == "playlist":
                 try:
+                    log.info("Fetching Spotify playlist: %s", url)
                     return self._resolve_playlist(url)
                 except SpotifyException as exc:
                     if exc.http_status in (403, 404):
-                        log.warning("Spotify API returned %s. Falling back to Embed Scraper...", exc.http_status)
+                        log.warning("Spotify API returned %s for playlist. Falling back to Embed Scraper...", exc.http_status)
                         return self._resolve_playlist_fallback(url)
                     raise
             elif url_type == "album":
                 try:
+                    log.info("Fetching Spotify album: %s", url)
                     return self._resolve_album(url)
                 except SpotifyException as exc:
                     if exc.http_status in (403, 404):
-                        log.warning("Spotify API returned %s. Falling back to Embed Scraper...", exc.http_status)
+                        log.warning("Spotify API returned %s for album. Falling back to Embed Scraper...", exc.http_status)
                         return self._resolve_album_fallback(url)
                     raise
             elif url_type == "artist":
+                log.info("Fetching Spotify artist top tracks: %s", url)
                 return self._resolve_artist(url)
             else:
                 raise ValueError(
@@ -201,6 +207,7 @@ class SpotifyResolver:
                     "Please provide a valid track, playlist, or album URL."
                 )
         except SpotifyException as exc:
+            log.error("Spotify API Exception: HTTP %s - %s", exc.http_status, exc.msg)
             # 401 after OAuth usually means the refresh token is revoked/expired.
             if exc.http_status == 401:
                 raise ValueError(
@@ -282,6 +289,7 @@ class SpotifyResolver:
             if not title:
                 continue
             artist = item.get("subtitle", "Unknown Artist")
+            # We don't have accurate duration from embed easily, but we have title and artist
             metas.append(SpotifyMeta(
                 title=title,
                 artist=artist,
@@ -290,6 +298,7 @@ class SpotifyResolver:
             
         if not metas:
             raise ValueError("Playlist embed had no valid tracks.")
+        log.info("Successfully extracted %d tracks from Spotify Embed playlist.", len(metas))
         return metas
 
     # ── Album ─────────────────────────────────────────────────
@@ -359,6 +368,7 @@ class SpotifyResolver:
             
         if not metas:
             raise ValueError("Album embed had no valid tracks.")
+        log.info("Successfully extracted %d tracks from Spotify Embed album.", len(metas))
         return metas
 
     # ── Artist ────────────────────────────────────────────────

@@ -17,6 +17,7 @@ from config import (
     FFMPEG_OPTIONS,
     INACTIVITY_TIMEOUT,
     MAX_QUEUE_SIZE,
+    MAX_RETRIES,
     COLOR_PRIMARY,
     COLOR_ERROR,
 )
@@ -79,6 +80,9 @@ class GuildPlayer:
 
         # Flag set when skip() is called
         self._skip_flag: bool = False
+        
+        # Track last playback error
+        self._last_error: Optional[Exception] = None
 
     # ── Lifecycle ────────────────────────────────────────────
 
@@ -199,47 +203,85 @@ class GuildPlayer:
 
             self.current = track
             self._skip_flag = False
-            self._track_finished.clear()
+            
+            retries = 0
+            
+            while retries <= MAX_RETRIES and not self._skip_flag:
+                self._track_finished.clear()
+                self._last_error = None
 
-            # ── Build FFmpeg audio source ─────────────────
-            audio_source = discord.FFmpegPCMAudio(
-                track.url,
-                before_options=FFMPEG_BEFORE_OPTIONS,
-                options=FFMPEG_OPTIONS,
-            )
-            # Volume transformer (default 100 %)
-            audio_source = discord.PCMVolumeTransformer(audio_source, volume=1.0)
-
-            # ── Start playback ────────────────────────────
-            self.voice_client.play(
-                audio_source,
-                after=self._after_callback,
-            )
-
-            # Announce the now-playing track
-            await self._send_now_playing(track)
-
-            # Update bot presence
-            try:
-                bot = self.voice_client.client
-                await bot.change_presence(
-                    activity=discord.Activity(
-                        type=discord.ActivityType.listening,
-                        name=f"{track.title}"
-                    )
+                # ── Build FFmpeg audio source ─────────────────
+                audio_source = discord.FFmpegPCMAudio(
+                    track.url,
+                    before_options=FFMPEG_BEFORE_OPTIONS,
+                    options=FFMPEG_OPTIONS,
                 )
-            except discord.DiscordException:
-                pass
+                # Volume transformer (default 100 %)
+                audio_source = discord.PCMVolumeTransformer(audio_source, volume=1.0)
 
-            # ── Wait for track to end ─────────────────────
-            try:
-                await self._track_finished.wait()
-            except asyncio.CancelledError:
-                self.voice_client.stop()
-                return
+                # ── Start playback ────────────────────────────
+                try:
+                    self.voice_client.play(
+                        audio_source,
+                        after=self._after_callback,
+                    )
+                except discord.ClientException as e:
+                    log.error("Voice client play exception: %s", e)
+                    self._last_error = e
+
+                if retries == 0:
+                    # Announce the now-playing track
+                    await self._send_now_playing(track)
+
+                    # Update bot presence
+                    try:
+                        bot = self.voice_client.client
+                        await bot.change_presence(
+                            activity=discord.Activity(
+                                type=discord.ActivityType.listening,
+                                name=f"{track.title}"
+                            )
+                        )
+                    except discord.DiscordException:
+                        pass
+
+                # ── Wait for track to end ─────────────────────
+                try:
+                    if not self._last_error:
+                        await self._track_finished.wait()
+                except asyncio.CancelledError:
+                    self.voice_client.stop()
+                    return
+
+                if self._skip_flag or not self._last_error:
+                    # Played successfully or skipped manually
+                    break
+                else:
+                    # There was an error during playback (e.g. stream expired)
+                    log.error("Playback error encountered for %s. Retrying... (%d/%d)", track.title, retries + 1, MAX_RETRIES)
+                    retries += 1
+                    if retries > MAX_RETRIES:
+                        await self._send_error(f"⚠️ Failed to play **{track.title}** after {MAX_RETRIES} retries. Skipping.")
+                        break
+                    
+                    # Wait briefly before retrying
+                    await asyncio.sleep(2)
+                    
+                    # Try to re-resolve the stream URL (it may have expired)
+                    try:
+                        log.info("Re-resolving stream URL for %s", track.title)
+                        track = await YTDLSource.resolve_query(
+                            track.original_query or track.title,
+                            requester=track.requester,
+                            source_label=track.source,
+                        )
+                        self.current = track
+                    except Exception as e:
+                        log.error("Failed to re-resolve track during retry: %s", e)
 
             self.current = None
             self.queue.task_done()
+            self._last_error = None
 
             # ── If queue is now empty, start idle watcher ─
             if self.queue.empty():
@@ -267,6 +309,8 @@ class GuildPlayer:
         """
         if error and not self._skip_flag:
             log.error("Playback error in guild %s: %s", self.guild.id, error)
+            self._last_error = error
+        
         # Wake up the playback loop coroutine (thread-safe)
         self._loop.call_soon_threadsafe(self._track_finished.set)
 

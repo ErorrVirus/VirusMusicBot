@@ -15,13 +15,14 @@ class Track:
 
     Attributes
     ----------
-    title       : Human-readable song title.
-    url         : Direct audio stream URL (obtained from yt-dlp).
-    webpage_url : Public web page for the track (YouTube/Spotify link shown to users).
-    duration    : Track duration in seconds (0 if unknown / live stream).
-    thumbnail   : URL of the album art / video thumbnail.
-    requester   : Discord display name of the user who queued this track.
-    source      : Where the track was requested from ('youtube' | 'spotify' | 'search').
+    title          : Human-readable song title.
+    url            : Direct audio stream URL (obtained from yt-dlp).
+    webpage_url    : Public web page for the track (YouTube/Spotify link shown to users).
+    duration       : Track duration in seconds (0 if unknown / live stream).
+    thumbnail      : URL of the album art / video thumbnail.
+    requester      : Discord display name of the user who queued this track.
+    source         : Where the track was requested from ('youtube' | 'spotify' | 'search').
+    original_query : The raw URL or search query used to find this track.
     """
 
     title: str
@@ -31,6 +32,7 @@ class Track:
     thumbnail: Optional[str] = None
     requester: str = "Unknown"
     source: str = "youtube"           # 'youtube' | 'spotify' | 'search'
+    original_query: str = ""          # used to re-resolve expired streams
 
     # ── Computed helpers ─────────────────────────────────────
 
@@ -62,6 +64,7 @@ class Track:
         *,
         requester: str = "Unknown",
         source: str = "youtube",
+        original_query: str = "",
     ) -> "Track":
         """
         Build a Track from the raw dictionary returned by yt-dlp's
@@ -69,9 +72,10 @@ class Track:
 
         Parameters
         ----------
-        info      : Raw yt-dlp info dict (must contain 'url' or 'formats').
-        requester : Discord display name of the requesting user.
-        source    : Origin label ('youtube', 'spotify', 'search').
+        info           : Raw yt-dlp info dict (must contain 'url' or 'formats').
+        requester      : Discord display name of the requesting user.
+        source         : Origin label ('youtube', 'spotify', 'search').
+        original_query : The raw URL or search query.
         """
         # yt-dlp may nest the actual stream URL under 'url' directly,
         # or inside the best-matching format entry.
@@ -85,6 +89,7 @@ class Track:
             thumbnail=info.get("thumbnail"),
             requester=requester,
             source=source,
+            original_query=original_query,
         )
 
     @staticmethod
