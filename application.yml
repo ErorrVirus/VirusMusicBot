@@ -19,8 +19,8 @@ plugins:
       enabled: true
   lavasrc:
     providers:
-      - "scsearch:\"%ISRC%\""
-      - "scsearch:%QUERY%"
+      - "ytsearch:\"%ISRC%\""
+      - "ytsearch:%QUERY%"
     sources:
       spotify: true
       applemusic: true
