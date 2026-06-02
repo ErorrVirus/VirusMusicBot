@@ -8,17 +8,16 @@ services:
       - lavalink
       - postgres
       - redis
+    network_mode: "host"
     command: >
       sh -c "apk add --no-cache git && 
       rm -rf /app/* /app/.[!.]* /app/..?* &&
       git clone https://github.com/ErorrVirus/VirusMusicBot.git . &&
       npm ci --only=production && 
       node src/shard.js"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     environment:
       - PORT=3005
-      - LAVALINK_HOST=host.docker.internal
+      - LAVALINK_HOST=127.0.0.1
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -26,8 +25,8 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-      - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@postgres:5432/virusmusic
-      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@127.0.0.1:5432/virusmusic
+      - REDIS_URL=redis://127.0.0.1:6379
 
   lavalink_init:
     image: alpine
@@ -59,6 +58,7 @@ services:
     image: postgres:16-alpine
     container_name: virusmusic_postgres
     restart: unless-stopped
+    network_mode: "host"
     environment:
       - POSTGRES_USER=virusmusic
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
@@ -70,6 +70,7 @@ services:
     image: redis:7-alpine
     container_name: virusmusic_redis
     restart: unless-stopped
+    network_mode: "host"
     volumes:
       - ./data/redis:/data
 
@@ -77,13 +78,14 @@ services:
     image: alpine
     container_name: virusmusic_backup
     restart: unless-stopped
+    network_mode: "host"
     depends_on:
       - postgres
     environment:
       - POSTGRES_USER=virusmusic
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
       - POSTGRES_DB=virusmusic
-      - POSTGRES_HOST=postgres
+      - POSTGRES_HOST=127.0.0.1
     volumes:
       - ./backups:/backups
     command: >
