@@ -41,7 +41,8 @@ module.exports = {
                     textId: interaction.channel.id,
                     voiceId: member.voice.channelId,
                     volume: 100,
-                    deaf: true
+                    deaf: true,
+                    mute: false
                 });
             } catch (err) {
                 return interaction.followUp({ content: `Failed to create player: ${err.message}` });

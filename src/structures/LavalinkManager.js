@@ -65,7 +65,8 @@ class LavalinkManager {
                                 textId: row.text_channel_id,
                                 voiceId: row.voice_channel_id,
                                 volume: 100,
-                                deaf: true
+                                deaf: true,
+                                mute: false
                             });
                             // Re-add tracks
                             if (row.current_track) {
