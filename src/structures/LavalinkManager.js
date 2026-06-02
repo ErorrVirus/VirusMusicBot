@@ -22,7 +22,7 @@ class LavalinkManager {
         };
 
         this.manager = new Kazagumo({
-            defaultSearchEngine: "youtube",
+            defaultSearchEngine: "soundcloud",
             plugins: plugins,
             send: (guildId, payload) => {
                 const guild = client.guilds.cache.get(guildId);
