@@ -14,9 +14,11 @@ services:
       git clone https://github.com/ErorrVirus/VirusMusicBot.git . &&
       npm ci --only=production && 
       node src/shard.js"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PORT=3005
-      - LAVALINK_HOST=lavalink
+      - LAVALINK_HOST=host.docker.internal
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -40,6 +42,7 @@ services:
     image: ghcr.io/lavalink-devs/lavalink:4.0.8
     container_name: virusmusic_lavalink
     restart: unless-stopped
+    network_mode: "host"
     depends_on:
       lavalink_init:
         condition: service_completed_successfully
