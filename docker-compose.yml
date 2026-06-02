@@ -18,7 +18,7 @@ services:
     environment:
       - PORT=3005
       - NODE_TLS_REJECT_UNAUTHORIZED=0
-      - LAVALINK_HOST=127.0.0.1
+      - LAVALINK_HOST=192.168.1.200
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -42,7 +42,9 @@ services:
     image: ghcr.io/lavalink-devs/lavalink:4.0.8
     container_name: virusmusic_lavalink
     restart: unless-stopped
-    network_mode: "host"
+    networks:
+      my_macvlan:
+        ipv4_address: 192.168.1.200
     depends_on:
       lavalink_init:
         condition: service_completed_successfully
@@ -97,3 +99,14 @@ services:
 
 volumes:
   lavalink_data:
+
+networks:
+  my_macvlan:
+    driver: macvlan
+    driver_opts:
+      parent: eno1
+    ipam:
+      config:
+        - subnet: "192.168.1.0/24"
+          gateway: "192.168.1.1"
+          ip_range: "192.168.1.200/32"
