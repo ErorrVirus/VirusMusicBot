@@ -5,6 +5,16 @@ module.exports = {
         .setName('stop')
         .setDescription('Stop the music and leave the voice channel'),
     async execute(interaction, client) {
+        const member = interaction.member;
+        const checks = require('../utils/checks');
+
+        if (await checks.checkBlacklist(member.user.id, interaction.guild.id)) {
+            return interaction.reply({ content: 'You or this server are blacklisted.', ephemeral: true });
+        }
+
+        if (!(await checks.checkDJ(member))) {
+            return interaction.reply({ content: 'You must have the DJ role!', ephemeral: true });
+        }
         const player = client.manager.players.get(interaction.guild.id);
         
         if (!player) {
@@ -20,3 +30,4 @@ module.exports = {
         return interaction.reply({ content: '🛑 Stopped playing and left the voice channel.' });
     }
 };
+

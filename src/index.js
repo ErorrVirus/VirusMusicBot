@@ -4,21 +4,21 @@ const fs = require("fs");
 const path = require("path");
 const LavalinkManager = require("./structures/LavalinkManager");
 const express = require("express");
+const db = require("./database/db");
+const redisClient = require("./cache/redis");
 
 // 1. Setup Healthcheck & Web Server (Pro Version)
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.get("/", (req, res) => res.send("VirusMusicPro is running!"));
+app.get("/", (req, res) => res.send("VirusMusicPro Shard is running!"));
 app.get("/health", (req, res) => res.status(200).send("OK"));
 
 const server = app.listen(port, () => {
     console.log(`[HTTP] Health server listening on port ${port}`);
 }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-        console.error(`[ERROR] Port ${port} is already in use. The bot will continue without the web server.`);
-    } else {
-        console.error(`[ERROR] Web server failed:`, err);
+        console.error(`[ERROR] Port ${port} is already in use.`);
     }
 });
 
@@ -32,6 +32,10 @@ const client = new Client({
     ]
 });
 
+// Attach DB to client for easy access
+client.db = db;
+client.redis = redisClient;
+
 // 3. Load Commands
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, "commands");
@@ -42,39 +46,62 @@ for (const file of commandFiles) {
     const command = require(filePath);
     if ("data" in command && "execute" in command) {
         client.commands.set(command.data.name, command);
-    } else {
-        console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
     }
 }
 
 // 4. Client Events
-client.once("ready", () => {
+client.once("ready", async () => {
     console.log(`Logged in as ${client.user.tag}`);
-    // Register slash commands globally (in production) or to a specific guild
     client.application.commands.set(client.commands.map(cmd => cmd.data));
     console.log(`Registered ${client.commands.size} slash commands.`);
 
-    // 5. Initialize Lavalink Manager AFTER Discord is ready (requires client.user.id)
+    // 5. Initialize Lavalink Manager
     if (!client.manager) {
         client.manager = new LavalinkManager(client).manager;
     }
 });
 
 client.on("interactionCreate", async interaction => {
-    if (!interaction.isChatInputCommand()) return;
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return;
 
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
+        // Initialize Guild in DB
+        await db.initGuild(interaction.guildId);
 
-    try {
-        await command.execute(interaction, client);
-    } catch (error) {
-        console.error(error);
-        const reply = { content: 'There was an error while executing this command!', ephemeral: true };
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(reply);
-        } else {
-            await interaction.reply(reply);
+        try {
+            await command.execute(interaction, client);
+        } catch (error) {
+            console.error(error);
+            const reply = { content: 'There was an error while executing this command!', ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(reply);
+            } else {
+                await interaction.reply(reply);
+            }
+        }
+    } else if (interaction.isButton()) {
+        // Handle Now Playing UI buttons
+        const player = client.manager.players.get(interaction.guildId);
+        if (!player) {
+            return interaction.reply({ content: 'No music is currently playing!', ephemeral: true });
+        }
+
+        try {
+            await interaction.deferUpdate();
+            if (interaction.customId === 'btn_pause') {
+                player.pause(!player.paused);
+            } else if (interaction.customId === 'btn_skip') {
+                player.skip();
+            } else if (interaction.customId === 'btn_stop') {
+                player.destroy();
+            } else if (interaction.customId === 'btn_loop') {
+                if (player.loop === 'none') player.setLoop('track');
+                else if (player.loop === 'track') player.setLoop('queue');
+                else player.setLoop('none');
+            }
+        } catch(e) {
+            console.error('[Button Error]', e);
         }
     }
 });

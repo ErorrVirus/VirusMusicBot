@@ -1,7 +1,4 @@
-
-
 services:
-  # This container downloads your bot's code from GitHub and runs it!
   bot:
     image: node:22-alpine
     container_name: virusmusic_bot
@@ -10,12 +7,14 @@ services:
     network_mode: "host"
     depends_on:
       - lavalink
+      - postgres
+      - redis
     command: >
       sh -c "apk add --no-cache git && 
       rm -rf /app/* /app/.[!.]* /app/..?* &&
       git clone https://github.com/ErorrVirus/VirusMusicBot.git . &&
       npm ci --only=production && 
-      node src/index.js"
+      node src/shard.js"
     environment:
       - PORT=3005
       - LAVALINK_HOST=127.0.0.1
@@ -26,8 +25,9 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@127.0.0.1:5432/virusmusic
+      - REDIS_URL=redis://127.0.0.1:6379
 
-  # This container downloads your application.yml configuration for Lavalink!
   lavalink_init:
     image: alpine
     container_name: virusmusic_lavalink_init
@@ -39,7 +39,7 @@ services:
       wget -O /opt/Lavalink/application.yml https://raw.githubusercontent.com/ErorrVirus/VirusMusicBot/main/application.yml"
 
   lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:4.0.5
+    image: ghcr.io/lavalink-devs/lavalink:4.0.8
     container_name: virusmusic_lavalink
     restart: unless-stopped
     network_mode: "host"
@@ -54,5 +54,47 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
     volumes:
       - lavalink_data:/opt/Lavalink
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: virusmusic_postgres
+    restart: unless-stopped
+    network_mode: "host"
+    environment:
+      - POSTGRES_USER=virusmusic
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
+      - POSTGRES_DB=virusmusic
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  redis:
+    image: redis:7-alpine
+    container_name: virusmusic_redis
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./data/redis:/data
+
+  backup:
+    image: alpine
+    container_name: virusmusic_backup
+    restart: unless-stopped
+    network_mode: "host"
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_USER=virusmusic
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
+      - POSTGRES_DB=virusmusic
+      - POSTGRES_HOST=127.0.0.1
+    volumes:
+      - ./backups:/backups
+    command: >
+      sh -c "apk add --no-cache postgresql-client zip &&
+      echo 'Starting backup cron daemon...' &&
+      echo '0 3 * * * PGPASSWORD=$$POSTGRES_PASSWORD pg_dump -h $$POSTGRES_HOST -U $$POSTGRES_USER -d $$POSTGRES_DB -F c -f /tmp/db.dump && zip -j /backups/db-backup-$$(date +\\%Y-\\%m-\\%d).zip /tmp/db.dump && rm /tmp/db.dump' > /etc/crontabs/root &&
+      crond -f -d 8"
+
 volumes:
   lavalink_data:

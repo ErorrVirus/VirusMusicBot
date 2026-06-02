@@ -12,6 +12,15 @@ module.exports = {
     async execute(interaction, client) {
         const query = interaction.options.getString('query');
         const member = interaction.member;
+        const checks = require('../utils/checks');
+
+        if (await checks.checkBlacklist(member.user.id, interaction.guild.id)) {
+            return interaction.reply({ content: 'You or this server are blacklisted from using this bot.', ephemeral: true });
+        }
+
+        if (!(await checks.checkDJ(member))) {
+            return interaction.reply({ content: 'You must have the DJ role to play music!', ephemeral: true });
+        }
 
         if (!member.voice.channelId) {
             return interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
