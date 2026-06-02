@@ -7,11 +7,12 @@ services:
     container_name: virusmusic_bot
     restart: unless-stopped
     working_dir: /app
+    network_mode: "host"
     depends_on:
       lavalink:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3005/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,8 +24,8 @@ services:
       npm ci --only=production && 
       node src/index.js"
     environment:
-      - PORT=3000
-      - LAVALINK_HOST=lavalink
+      - PORT=3005
+      - LAVALINK_HOST=127.0.0.1
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -47,6 +48,7 @@ services:
     image: ghcr.io/lavalink-devs/lavalink:4.0.5
     container_name: virusmusic_lavalink
     restart: unless-stopped
+    network_mode: "host"
     depends_on:
       lavalink_init:
         condition: service_completed_successfully
