@@ -6,6 +6,24 @@ class LavalinkManager {
     constructor(client) {
         this.client = client;
 
+        // Helper to strip circular references for JSON DB storage
+        this.sanitizeTrack = (t) => {
+            if (!t) return null;
+            return {
+                encoded: t.track || t.encoded,
+                info: {
+                    title: t.title,
+                    identifier: t.identifier,
+                    author: t.author,
+                    length: t.length,
+                    isSeekable: t.isSeekable,
+                    isStream: t.isStream,
+                    uri: t.uri,
+                    sourceName: t.sourceName
+                }
+            };
+        };
+
         const Nodes = [{
             name: "LocalNode",
             url: `${process.env.LAVALINK_HOST || "127.0.0.1"}:${process.env.LAVALINK_PORT || "2333"}`,
@@ -89,8 +107,10 @@ class LavalinkManager {
                 player.data.set('nowPlayingMessage', msg);
             }
 
-            // Save state to DB
-            await client.db.saveQueueState(player.guildId, player.voiceId, player.textId, track, player.queue);
+            // Save state to DB safely
+            const safeTrack = this.sanitizeTrack(track);
+            const safeQueue = player.queue.map(t => this.sanitizeTrack(t));
+            await client.db.saveQueueState(player.guildId, player.voiceId, player.textId, safeTrack, safeQueue);
             
             // Log history
             await client.db.query(
@@ -119,7 +139,9 @@ class LavalinkManager {
         this.manager.on("playerUpdate", async player => {
              // Occasionally save state changes like queue shuffle or skips
              if (player.queue.current) {
-                 await client.db.saveQueueState(player.guildId, player.voiceId, player.textId, player.queue.current, player.queue);
+                 const safeTrack = this.sanitizeTrack(player.queue.current);
+                 const safeQueue = player.queue.map(t => this.sanitizeTrack(t));
+                 await client.db.saveQueueState(player.guildId, player.voiceId, player.textId, safeTrack, safeQueue);
              }
         });
     }
