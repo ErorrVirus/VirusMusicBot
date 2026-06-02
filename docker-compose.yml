@@ -59,7 +59,7 @@ services:
       retries: 5
       start_period: 60s
     environment:
-      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true -Dkoe.native.udpqueue=false -Dkoe.native.epoll=false
+      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true
       - SERVER_PORT=2333
       - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
