@@ -42,6 +42,11 @@ client.once("ready", () => {
     // Register slash commands globally (in production) or to a specific guild
     client.application.commands.set(client.commands.map(cmd => cmd.data));
     console.log(`Registered ${client.commands.size} slash commands.`);
+
+    // 5. Initialize Lavalink Manager AFTER Discord is ready (requires client.user.id)
+    if (!client.manager) {
+        client.manager = new LavalinkManager(client).manager;
+    }
 });
 
 client.on("interactionCreate", async interaction => {
@@ -62,9 +67,6 @@ client.on("interactionCreate", async interaction => {
         }
     }
 });
-
-// 5. Initialize Lavalink Manager
-client.manager = new LavalinkManager(client).manager;
 
 // 6. Login
 client.login(process.env.DISCORD_TOKEN);
