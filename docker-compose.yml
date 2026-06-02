@@ -42,7 +42,7 @@ services:
       - lavalink_data:/opt/Lavalink
     command: >
       sh -c "apk add --no-cache wget && 
-      wget -O /opt/Lavalink/application.yml https://raw.githubusercontent.com/ErorrVirus/VirusMusicBot/main/application.yml"
+      wget -qO /opt/Lavalink/application.yml 'https://raw.githubusercontent.com/ErorrVirus/VirusMusicBot/main/application.yml?timestamp='$(date +%s)"
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.0.8
