@@ -1,79 +1,68 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
+const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Play a song from YouTube or Spotify')
+        .setDescription('Play a track or playlist from YouTube, Spotify, etc.')
         .addStringOption(option => 
             option.setName('query')
-                .setDescription('The URL or search query')
+                .setDescription('The song name or URL to play')
                 .setRequired(true)
         ),
     async execute(interaction, client) {
+        await interaction.deferReply();
+
         const query = interaction.options.getString('query');
         const member = interaction.member;
-        const checks = require('../utils/checks');
-
-        if (await checks.checkBlacklist(member.user.id, interaction.guild.id)) {
-            return interaction.reply({ content: 'You or this server are blacklisted from using this bot.', ephemeral: true });
-        }
-
-        if (!(await checks.checkDJ(member))) {
-            return interaction.reply({ content: 'You must have the DJ role to play music!', ephemeral: true });
-        }
 
         if (!member.voice.channelId) {
-            return interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
+            return interaction.editReply({ embeds: [errorEmbed('You must be in a voice channel to use this command.')] });
         }
 
         const botVoiceChannel = interaction.guild.members.me.voice.channelId;
         if (botVoiceChannel && botVoiceChannel !== member.voice.channelId) {
-            return interaction.reply({ content: 'I am already playing in another voice channel!', ephemeral: true });
-        }
-
-        await interaction.deferReply();
-
-        let player = client.manager.players.get(interaction.guild.id);
-        if (!player) {
-            try {
-                player = await client.manager.createPlayer({
-                    guildId: interaction.guild.id,
-                    textId: interaction.channel.id,
-                    voiceId: member.voice.channelId,
-                    volume: 100,
-                    deaf: true,
-                    mute: false
-                });
-            } catch (err) {
-                return interaction.followUp({ content: `Failed to create player: ${err.message}` });
-            }
+            return interaction.editReply({ embeds: [errorEmbed('I am already playing in another voice channel.')] });
         }
 
         try {
-            const res = await client.manager.search(query, { requester: member.user });
-            
-            if (!res || !res.tracks.length) {
-                return interaction.followUp({ content: 'No results found!' });
+            let player = client.manager.getPlayer(interaction.guild.id);
+            if (!player) {
+                player = await client.manager.createPlayer({
+                    guildId: interaction.guild.id,
+                    textId: interaction.channel.id,
+                    voiceId: member.voice.channelId
+                });
             }
 
-            if (res.type === 'PLAYLIST') {
-                for (const track of res.tracks) {
-                    player.queue.add(track);
+            // Always prioritize ytsearch if it's not a URL
+            const isUrl = /^https?:\/\//.test(query);
+            const resolveQuery = isUrl ? query : `ytsearch:${query}`;
+
+            const result = await client.manager.resolve(resolveQuery, interaction.user);
+            
+            if (!result || !result.tracks.length) {
+                return interaction.editReply({ embeds: [errorEmbed('No results found for your query.')] });
+            }
+
+            if (result.type === 'playlist') {
+                for (const track of result.tracks) {
+                    player.queue.push(track);
                 }
-                interaction.followUp({ content: `🎵 Added playlist **${res.playlistName}** (${res.tracks.length} tracks) to the queue.` });
+                interaction.editReply({ embeds: [successEmbed(`Added ${result.tracks.length} tracks from **${result.playlistName}** to the queue.`)] });
             } else {
-                const track = res.tracks[0];
-                player.queue.add(track);
-                interaction.followUp({ content: `🎵 Added **${track.title}** to the queue.` });
+                const track = result.tracks[0];
+                player.queue.push(track);
+                interaction.editReply({ embeds: [successEmbed(`Added [**${track.info.title}**](${track.info.uri}) to the queue.`)] });
             }
 
-            if (!player.playing && !player.paused) {
-                player.play();
+            if (!player.current) {
+                player.playNext();
             }
-            
+
         } catch (error) {
             console.error(error);
-            interaction.followUp({ content: `An error occurred while searching: ${error.message}` });
+            interaction.editReply({ embeds: [errorEmbed('An error occurred while trying to play the track.')] });
         }
     }
 };

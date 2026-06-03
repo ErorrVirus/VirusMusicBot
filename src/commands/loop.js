@@ -1,40 +1,31 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('loop')
-        .setDescription('Toggle loop mode for the track or queue')
+        .setDescription('Toggle repeat mode.')
         .addStringOption(option => 
             option.setName('mode')
-                .setDescription('The loop mode to set')
+                .setDescription('The loop mode')
                 .setRequired(true)
                 .addChoices(
+                    { name: 'None', value: 'none' },
                     { name: 'Track', value: 'track' },
-                    { name: 'Queue', value: 'queue' },
-                    { name: 'Off', value: 'none' }
+                    { name: 'Queue', value: 'queue' }
                 )
         ),
     async execute(interaction, client) {
-        const player = client.manager.players.get(interaction.guild.id);
-        
-        if (!player || !player.queue.current) {
-            return interaction.reply({ content: 'No music is currently playing!', ephemeral: true });
-        }
+        const player = client.manager.getPlayer(interaction.guild.id);
+        if (!player || !player.current) return interaction.reply({ embeds: [errorEmbed('I am not playing anything.')], ephemeral: true });
 
-        const checks = require('../utils/checks');
-        if (!(await checks.checkDJ(interaction.member))) {
-            return interaction.reply({ content: 'You must have the DJ role to change loop modes!', ephemeral: true });
+        if (interaction.member.voice.channelId !== player.voiceId) {
+            return interaction.reply({ embeds: [errorEmbed('You must be in my voice channel to use this command.')], ephemeral: true });
         }
 
         const mode = interaction.options.getString('mode');
-        player.setLoop(mode);
-
-        const modeNames = {
-            'track': '🔂 Track',
-            'queue': '🔁 Queue',
-            'none': '➡️ Off'
-        };
-
-        await interaction.reply({ content: `Loop mode set to: **${modeNames[mode]}**` });
+        player.loop = mode;
+        
+        interaction.reply({ embeds: [successEmbed(`Loop mode set to **${mode}**.`)] });
     }
 };

@@ -1,16 +1,13 @@
-FROM node:22-alpine
+FROM node:20-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
+# Install dependencies
 COPY package*.json ./
-
-# Install production dependencies
 RUN npm ci --only=production
 
-# Copy application files
+# Copy source
 COPY . .
 
-# Start the Discord bot
+# Run bot
 CMD ["node", "src/index.js"]

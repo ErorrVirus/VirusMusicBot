@@ -1,33 +1,20 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('stop')
-        .setDescription('Stop the music and leave the voice channel'),
+        .setDescription('Stop music and clear the queue (without disconnecting).'),
     async execute(interaction, client) {
-        const member = interaction.member;
-        const checks = require('../utils/checks');
+        const player = client.manager.getPlayer(interaction.guild.id);
+        if (!player || !player.current) return interaction.reply({ embeds: [errorEmbed('I am not playing anything.')], ephemeral: true });
 
-        if (await checks.checkBlacklist(member.user.id, interaction.guild.id)) {
-            return interaction.reply({ content: 'You or this server are blacklisted.', ephemeral: true });
+        if (interaction.member.voice.channelId !== player.voiceId) {
+            return interaction.reply({ embeds: [errorEmbed('You must be in my voice channel to use this command.')], ephemeral: true });
         }
 
-        if (!(await checks.checkDJ(member))) {
-            return interaction.reply({ content: 'You must have the DJ role!', ephemeral: true });
-        }
-        const player = client.manager.players.get(interaction.guild.id);
-        
-        if (!player) {
-            return interaction.reply({ content: 'I am not playing anything!', ephemeral: true });
-        }
-
-        const memberVoice = interaction.member.voice.channelId;
-        if (!memberVoice || memberVoice !== player.voiceId) {
-            return interaction.reply({ content: 'You must be in the same voice channel as me!', ephemeral: true });
-        }
-
-        player.destroy();
-        return interaction.reply({ content: '🛑 Stopped playing and left the voice channel.' });
+        player.queue = [];
+        player.player.stopTrack();
+        interaction.reply({ embeds: [successEmbed('Stopped music and cleared the queue.')] });
     }
 };
-

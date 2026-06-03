@@ -1,35 +1,21 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('previous')
-        .setDescription('Plays the previously played track'),
+        .setDescription('Play the previous track.'),
     async execute(interaction, client) {
-        const player = client.manager.players.get(interaction.guild.id);
-        
-        if (!player) {
-            return interaction.reply({ content: 'No music is currently playing!', ephemeral: true });
+        const player = client.manager.getPlayer(interaction.guild.id);
+        if (!player) return interaction.reply({ embeds: [errorEmbed('I am not playing anything.')], ephemeral: true });
+
+        if (interaction.member.voice.channelId !== player.voiceId) {
+            return interaction.reply({ embeds: [errorEmbed('You must be in my voice channel to use this command.')], ephemeral: true });
         }
 
-        const checks = require('../utils/checks');
-        if (!(await checks.checkDJ(interaction.member))) {
-            return interaction.reply({ content: 'You must have the DJ role to play previous tracks!', ephemeral: true });
-        }
+        const success = player.playPrevious();
+        if (!success) return interaction.reply({ embeds: [errorEmbed('There is no previous track in history.')], ephemeral: true });
 
-        if (!player.queue.previous) {
-            return interaction.reply({ content: 'There is no previous track to play!', ephemeral: true });
-        }
-
-        // Kazagumo stores the previous track in `queue.previous`
-        // To play it, we need to add it to the front of the queue and skip the current track
-        const previousTrack = player.queue.previous;
-        
-        // Add the previous track to the very beginning of the queue
-        player.queue.unshift(previousTrack);
-        
-        // Skip the current track so the previous one starts playing immediately
-        player.skip();
-
-        await interaction.reply({ content: `⏪ Playing previous track: **${previousTrack.title}**` });
+        interaction.reply({ embeds: [successEmbed('Playing the previous track.')] });
     }
 };

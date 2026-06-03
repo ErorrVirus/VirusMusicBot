@@ -1,41 +1,27 @@
 services:
   bot:
-    image: node:20-alpine
-    container_name: virusmusic_bot
+    build: .
+    container_name: virusmusicbot_v2
     restart: unless-stopped
-    working_dir: /app
     depends_on:
       - lavalink
-      - postgres
-      - redis
     networks:
       - default
     dns:
       - 8.8.8.8
       - 1.1.1.1
-    command: >
-      sh -c "apk add --no-cache git && 
-      rm -rf /app/* /app/.[!.]* /app/..?* &&
-      git clone https://github.com/ErorrVirus/VirusMusicBot.git . &&
-      npm ci --only=production && 
-      node src/shard.js"
     environment:
-      - PORT=3005
-      - NODE_TLS_REJECT_UNAUTHORIZED=0
-      - LAVALINK_HOST=virusmusic_lavalink
+      - NODE_ENV=production
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
-      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - LAVALINK_HOST=virusmusicbot_lavalink
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-      - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@virusmusic_postgres:5432/virusmusic
-      - REDIS_URL=redis://virusmusic_redis:6379
 
   lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:4.0.8-ubuntu
-    container_name: virusmusic_lavalink
+    image: ghcr.io/lavalink-devs/lavalink:4.0.8
+    container_name: virusmusicbot_lavalink
     user: "root"
     restart: unless-stopped
     networks:
@@ -43,7 +29,6 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
-
     environment:
       - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US
       - SERVER_PORT=2333
@@ -66,7 +51,7 @@ services:
       - PLUGINS_YOUTUBE_ALLOWDIRECTVIDEOIDS=true
       - PLUGINS_YOUTUBE_ALLOWDIRECTPLAYLISTIDS=true
       - PLUGINS_YOUTUBE_CLIENTS_0=TVHTML5_SIMPLY
-      - PLUGINS_YOUTUBE_CLIENTS_1=IOS
+      - PLUGINS_YOUTUBE_CLIENTS_1=WEB
       - PLUGINS_YOUTUBE_CLIENTS_2=ANDROID_VR
       - PLUGINS_LAVASRC_PROVIDERS_0=ytsearch:"%ISRC%"
       - PLUGINS_LAVASRC_PROVIDERS_1=ytsearch:%QUERY%
@@ -82,42 +67,6 @@ services:
       - PLUGINS_LAVASRC_SPOTIFY_PREFERPARTNERAPI=true
       - PLUGINS_LAVASRC_SPOTIFY_COUNTRYCODE=US
 
-
-  postgres:
-    image: postgres:16-alpine
-    container_name: virusmusic_postgres
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=virusmusic
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
-      - POSTGRES_DB=virusmusic
-    volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    container_name: virusmusic_redis
-    restart: unless-stopped
-    volumes:
-      - ./data/redis:/data
-
-  backup:
-    image: alpine
-    container_name: virusmusic_backup
-    restart: unless-stopped
-    depends_on:
-      - postgres
-    environment:
-      - POSTGRES_USER=virusmusic
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-youshallnotpass}
-      - POSTGRES_DB=virusmusic
-      - POSTGRES_HOST=virusmusic_postgres
-    volumes:
-      - ./backups:/backups
-    command: >
-      sh -c "apk add --no-cache postgresql-client zip &&
-      echo 'Starting backup cron daemon...' &&
-      echo '0 3 * * * PGPASSWORD=$$POSTGRES_PASSWORD pg_dump -h $$POSTGRES_HOST -U $$POSTGRES_USER -d $$POSTGRES_DB -F c -f /tmp/db.dump && zip -j /backups/db-backup-$$(date +\\%Y-\\%m-\\%d).zip /tmp/db.dump && rm /tmp/db.dump' > /etc/crontabs/root &&
-      crond -f -d 8"
-
-
+networks:
+  default:
+    name: virusmusicbot_v2_network
