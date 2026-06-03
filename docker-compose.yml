@@ -9,9 +9,7 @@ services:
       - postgres
       - redis
     networks:
-      default:
-      my_macvlan:
-        ipv4_address: 192.168.1.201
+      - default
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -24,7 +22,7 @@ services:
     environment:
       - PORT=3005
       - NODE_TLS_REJECT_UNAUTHORIZED=0
-      - LAVALINK_HOST=192.168.1.200
+      - LAVALINK_HOST=virusmusic_lavalink
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
@@ -49,8 +47,7 @@ services:
     container_name: virusmusic_lavalink
     restart: unless-stopped
     networks:
-      my_macvlan:
-        ipv4_address: 192.168.1.200
+      - default
     dns:
       - 8.8.8.8
       - 1.1.1.1
@@ -105,14 +102,3 @@ services:
 
 volumes:
   lavalink_data:
-
-networks:
-  my_macvlan:
-    driver: macvlan
-    driver_opts:
-      parent: eno1
-    ipam:
-      config:
-        - subnet: "192.168.1.0/24"
-          gateway: "192.168.1.1"
-          ip_range: "192.168.1.200/31"
