@@ -51,7 +51,7 @@ services:
       - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
-      - SPOTIFY_SPDC=
+      - SPOTIFY_SPDC=${SPOTIFY_SPDC}
       - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:1.18.1
       - LAVALINK_PLUGINS_0_REPOSITORY=https://maven.lavalink.dev/releases
       - LAVALINK_PLUGINS_1_DEPENDENCY=com.github.topi314.lavasrc:lavasrc-plugin:4.8.3
