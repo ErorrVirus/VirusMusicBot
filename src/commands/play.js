@@ -66,7 +66,8 @@ module.exports = {
 
         } catch (error) {
             console.error(error);
-            interaction.editReply({ embeds: [errorEmbed('An error occurred while trying to play the track.')] });
+            const errorMessage = error.message ? error.message : 'Unknown error';
+            interaction.editReply({ embeds: [errorEmbed(`An error occurred while trying to play the track: \n\`${errorMessage}\``)] });
         }
     }
 };

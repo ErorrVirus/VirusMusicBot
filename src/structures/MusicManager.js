@@ -117,8 +117,9 @@ class MusicManager extends EventEmitter {
             tracks.forEach(t => t.requester = requester);
             return { type: result.loadType, tracks, playlistName: null };
         } else if (result.loadType === 'playlist') {
-            result.data.tracks.forEach(t => t.requester = requester);
-            return { type: 'playlist', tracks: result.data.tracks, playlistName: result.data.info.name };
+            const tracks = result.data.tracks || [];
+            tracks.forEach(t => t.requester = requester);
+            return { type: 'playlist', tracks: tracks, playlistName: result.data.info?.name || 'Unknown Playlist' };
         }
 
         return null;
