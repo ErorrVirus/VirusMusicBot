@@ -33,15 +33,6 @@ services:
       - POSTGRES_URL=postgresql://virusmusic:youshallnotpass@virusmusic_postgres:5432/virusmusic
       - REDIS_URL=redis://virusmusic_redis:6379
 
-  lavalink_init:
-    image: alpine
-    container_name: virusmusic_lavalink_init
-    volumes:
-      - lavalink_data:/opt/Lavalink
-    command: >
-      sh -c "apk add --no-cache wget && 
-      wget -qO /opt/Lavalink/application.yml 'https://raw.githubusercontent.com/ErorrVirus/VirusMusicBot/main/application.yml?v=bypasscache126'"
-
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.0.8
     container_name: virusmusic_lavalink
@@ -51,9 +42,7 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
-    depends_on:
-      lavalink_init:
-        condition: service_completed_successfully
+
     environment:
       - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US
       - SERVER_PORT=2333
@@ -62,7 +51,7 @@ services:
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - SPOTIFY_SPDC=${SPOTIFY_SPDC}
     volumes:
-      - lavalink_data:/opt/Lavalink
+      - ./application.yml:/opt/Lavalink/application.yml
 
   postgres:
     image: postgres:16-alpine
@@ -101,5 +90,4 @@ services:
       echo '0 3 * * * PGPASSWORD=$$POSTGRES_PASSWORD pg_dump -h $$POSTGRES_HOST -U $$POSTGRES_USER -d $$POSTGRES_DB -F c -f /tmp/db.dump && zip -j /backups/db-backup-$$(date +\\%Y-\\%m-\\%d).zip /tmp/db.dump && rm /tmp/db.dump' > /etc/crontabs/root &&
       crond -f -d 8"
 
-volumes:
-  lavalink_data:
+
