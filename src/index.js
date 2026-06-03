@@ -14,8 +14,10 @@ const client = new Client({
     ]
 });
 
-// Initialize Music Manager
-client.manager = new MusicManager(client);
+// Initialize Music Manager after a short delay to let Lavalink boot
+setTimeout(() => {
+    client.manager = new MusicManager(client);
+}, 10000);
 
 // Load Handlers
 require('./handlers/eventHandler')(client);
