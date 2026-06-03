@@ -11,7 +11,9 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
+      - TVHTML5_SIMPLY
       - IOS
+      - ANDROID_VR
     oauth:
       enabled: false
   lavasrc:
