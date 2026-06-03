@@ -31,6 +31,7 @@ plugins:
       clientId: ${SPOTIFY_CLIENT_ID:""}
       clientSecret: ${SPOTIFY_CLIENT_SECRET:""}
       spDc: ${SPOTIFY_SPDC:""}
+      preferPartnerApi: true
       countryCode: "US"
       playlistLoadLimit: 6
       albumLoadLimit: 6
