@@ -27,7 +27,7 @@ services:
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
 
   lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:4.0.8
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2
     container_name: virusmusicbot_lavalink
     user: "root"
     restart: unless-stopped

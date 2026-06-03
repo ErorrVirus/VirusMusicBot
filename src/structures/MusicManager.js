@@ -71,6 +71,14 @@ class MusicManager extends EventEmitter {
             // Ignore normal disconnects
             if (data.code === 4014) return;
         });
+
+        this.on('playerException', (player, data) => {
+            console.error(`Track exception in guild ${player.guildId}:`, data);
+        });
+
+        this.on('playerStuck', (player, data) => {
+            console.warn(`Track stuck in guild ${player.guildId}:`, data);
+        });
     }
 
     async createPlayer(options) {
