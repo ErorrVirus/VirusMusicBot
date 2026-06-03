@@ -26,7 +26,7 @@ class MusicPlayer {
     }
 
     async connect() {
-        this.player = await this.node.joinChannel({
+        this.player = await this.manager.shoukaku.joinVoiceChannel({
             guildId: this.guildId,
             channelId: this.voiceId,
             shardId: 0,
@@ -109,7 +109,7 @@ class MusicPlayer {
         this.queue = [];
         this.previous = [];
         this.current = null;
-        if (this.player) this.node.leaveChannel(this.guildId);
+        if (this.player) this.manager.shoukaku.leaveVoiceChannel(this.guildId);
         this.manager.players.delete(this.guildId);
     }
 }
