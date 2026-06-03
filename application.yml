@@ -44,6 +44,8 @@ lavalink:
       repository: "https://maven.lavalink.dev/releases"
   server:
     password: "youshallnotpass"
+    lavaplayer:
+      nonAllocating: false
     sources:
       youtube: false # Disable default YouTube source in favor of the plugin
       bandcamp: true
