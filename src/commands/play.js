@@ -25,6 +25,10 @@ module.exports = {
             return interaction.editReply({ embeds: [errorEmbed('I am already playing in another voice channel.')] });
         }
 
+        if (!client.manager) {
+            return interaction.editReply({ embeds: [errorEmbed('The music system is currently starting up. Please wait a few seconds and try again!')] });
+        }
+
         try {
             let player = client.manager.getPlayer(interaction.guild.id);
             if (!player) {
