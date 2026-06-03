@@ -121,6 +121,7 @@ class MusicManager extends EventEmitter {
             tracks.forEach(t => t.requester = requester);
             return { type: 'playlist', tracks: tracks, playlistName: result.data.info?.name || 'Unknown Playlist' };
         } else if (result.loadType === 'error') {
+            console.error('Lavalink Raw Error Payload:', JSON.stringify(result, null, 2));
             throw new Error(result.data?.message || 'Lavalink encountered an error resolving the track.');
         }
 
