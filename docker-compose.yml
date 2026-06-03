@@ -40,7 +40,7 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     environment:
-      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US
+      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US -Dplugins.lavasrc.spotify.clientId=${SPOTIFY_CLIENT_ID} -Dplugins.lavasrc.spotify.clientSecret=${SPOTIFY_CLIENT_SECRET}
       - SERVER_PORT=2333
       - SERVER_ADDRESS=0.0.0.0
       - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
