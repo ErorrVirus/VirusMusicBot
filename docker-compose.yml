@@ -34,7 +34,7 @@ services:
       - REDIS_URL=redis://virusmusic_redis:6379
 
   lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:4.0.8
+    image: ghcr.io/lavalink-devs/lavalink:4.0.8-ubuntu
     container_name: virusmusic_lavalink
     user: "root"
     entrypoint: ["sh", "-c", "wget -qO /opt/Lavalink/application.yml https://raw.githubusercontent.com/ErorrVirus/VirusMusicBot/main/application.yml && exec java -jar Lavalink.jar"]
