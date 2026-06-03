@@ -20,7 +20,8 @@ class MusicManager extends EventEmitter {
             moveOnDisconnect: false,
             resumable: false,
             resumableTimeout: 30,
-            reconnectTries: 5,
+            reconnectTries: 20,
+            reconnectInterval: 5000,
             restTimeout: 10000
         };
 
