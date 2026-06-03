@@ -62,7 +62,7 @@ class MusicPlayer {
         }
 
         try {
-            await this.player.playTrack({ track: this.current.encoded });
+            await this.player.playTrack({ track: { encoded: this.current.encoded } });
             await this.player.setGlobalVolume(this.volume);
         } catch (error) {
             console.error('Failed to play track', error);
