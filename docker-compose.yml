@@ -1,24 +1,26 @@
+version: '3.8'
+
 services:
   bot:
     image: node:20-alpine
-    container_name: virusmusicbot_v2
+    container_name: virusmusicbot_bot
     restart: unless-stopped
     working_dir: /app
     depends_on:
       - lavalink
     networks:
-      - default
+      - virusmusicbot_net
     dns:
       - 8.8.8.8
       - 1.1.1.1
     command: >
-      sh -c "apk add --no-cache git curl && 
-      rm -rf /app/* /app/.[!.]* /app/..?* &&
+      sh -c "apk add --no-cache git curl &&
+      rm -rf /app/* /app/.[!.]* &&
       git clone https://github.com/ErorrVirus/VirusMusicBot.git . &&
-      npm install --omit=dev && 
-      echo 'Waiting for Lavalink to boot...' &&
-      while ! curl -s http://virusmusicbot_lavalink:2333/version; do sleep 5; done &&
-      echo 'Lavalink is up! Starting bot...' &&
+      npm install --omit=dev &&
+      echo 'Waiting for Lavalink...' &&
+      until curl -sf http://virusmusicbot_lavalink:2333/version; do sleep 5; done &&
+      echo 'Lavalink ready! Starting bot...' &&
       node src/index.js"
     environment:
       - NODE_ENV=production
@@ -32,50 +34,25 @@ services:
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.2.2
     container_name: virusmusicbot_lavalink
-    user: "root"
     restart: unless-stopped
     networks:
-      - default
+      - virusmusicbot_net
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    volumes:
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
+      - lavalink_plugins:/opt/Lavalink/plugins
     environment:
-      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US -Dplugins.lavasrc.spotify.clientId=${SPOTIFY_CLIENT_ID} -Dplugins.lavasrc.spotify.clientSecret=${SPOTIFY_CLIENT_SECRET}
-      - SERVER_PORT=2333
-      - SERVER_ADDRESS=0.0.0.0
-      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-      - LAVALINK_SERVER_LAVAPLAYER_NONALLOCATING=false
-      - LAVALINK_SERVER_SOURCES_YOUTUBE=false
-      - LAVALINK_SERVER_SOURCES_BANDCAMP=true
-      - LAVALINK_SERVER_SOURCES_SOUNDCLOUD=true
-      - LAVALINK_SERVER_SOURCES_TWITCH=true
-      - LAVALINK_SERVER_SOURCES_VIMEO=true
-      - LAVALINK_SERVER_SOURCES_HTTP=true
-      - LAVALINK_SERVER_SOURCES_LOCAL=false
-      - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:1.18.1
-      - LAVALINK_PLUGINS_0_REPOSITORY=https://maven.lavalink.dev/releases
-      - LAVALINK_PLUGINS_1_DEPENDENCY=com.github.topi314.lavasrc:lavasrc-plugin:4.8.3
-      - LAVALINK_PLUGINS_1_REPOSITORY=https://maven.lavalink.dev/releases
-      - PLUGINS_YOUTUBE_ENABLED=true
-      - PLUGINS_YOUTUBE_ALLOWSEARCH=true
-      - PLUGINS_YOUTUBE_ALLOWDIRECTVIDEOIDS=true
-      - PLUGINS_YOUTUBE_ALLOWDIRECTPLAYLISTIDS=true
-      - PLUGINS_YOUTUBE_CLIENTS_0=TVHTML5_SIMPLY
-      - PLUGINS_YOUTUBE_CLIENTS_1=WEB
-      - PLUGINS_YOUTUBE_CLIENTS_2=ANDROID_VR
-      - PLUGINS_LAVASRC_PROVIDERS_0=ytsearch:"%ISRC%"
-      - PLUGINS_LAVASRC_PROVIDERS_1=ytsearch:%QUERY%
-      - PLUGINS_LAVASRC_SOURCES_SPOTIFY=true
-      - PLUGINS_LAVASRC_SOURCES_APPLEMUSIC=true
-      - PLUGINS_LAVASRC_SOURCES_DEEZER=false
-      - PLUGINS_LAVASRC_SOURCES_YANDEXMUSIC=false
-      - PLUGINS_LAVASRC_SOURCES_FLOWERYTTS=false
-      - PLUGINS_LAVASRC_SOURCES_YOUTUBE=false
-      - PLUGINS_LAVASRC_SPOTIFY_CLIENTID=${SPOTIFY_CLIENT_ID}
-      - PLUGINS_LAVASRC_SPOTIFY_CLIENTSECRET=${SPOTIFY_CLIENT_SECRET}
-      - PLUGINS_LAVASRC_SPOTIFY_PREFERPARTNERAPI=false
-      - PLUGINS_LAVASRC_SPOTIFY_COUNTRYCODE=US
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_SPDC=${SPOTIFY_SPDC}
+      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true
+
+volumes:
+  lavalink_plugins:
 
 networks:
-  default:
-    name: virusmusicbot_v2_network
+  virusmusicbot_net:
+    name: virusmusicbot_net

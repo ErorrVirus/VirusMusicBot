@@ -1,13 +1,18 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 
+// Detect Spotify URLs so we send them raw to LavaSrc
+const SPOTIFY_REGEX = /^https?:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/[A-Za-z0-9]+/;
+// Detect generic URLs (YouTube, SoundCloud, etc.)
+const URL_REGEX = /^https?:\/\//;
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Play a track or playlist from YouTube, Spotify, etc.')
-        .addStringOption(option => 
+        .setDescription('Play a song, album or playlist from YouTube or Spotify.')
+        .addStringOption(option =>
             option.setName('query')
-                .setDescription('The song name or URL to play')
+                .setDescription('Song name, YouTube URL, or Spotify link')
                 .setRequired(true)
         ),
     async execute(interaction, client) {
@@ -26,7 +31,7 @@ module.exports = {
         }
 
         if (!client.manager) {
-            return interaction.editReply({ embeds: [errorEmbed('The music system is currently starting up. Please wait a few seconds and try again!')] });
+            return interaction.editReply({ embeds: [errorEmbed('The music system is starting up. Please wait a few seconds and try again!')] });
         }
 
         try {
@@ -39,21 +44,30 @@ module.exports = {
                 });
             }
 
-            // Always prioritize ytsearch if it's not a URL
-            const isUrl = /^https?:\/\//.test(query);
-            const resolveQuery = isUrl ? query : `ytsearch:${query}`;
+            // Build the resolve query:
+            // - Spotify URLs: send raw so LavaSrc plugin can handle them
+            // - Other URLs: send raw (YouTube, SoundCloud, etc.)
+            // - Plain text: use ytsearch prefix
+            let resolveQuery;
+            if (SPOTIFY_REGEX.test(query)) {
+                resolveQuery = query; // LavaSrc intercepts spotify.com URLs automatically
+            } else if (URL_REGEX.test(query)) {
+                resolveQuery = query; // Raw URL for YouTube, SoundCloud, etc.
+            } else {
+                resolveQuery = `ytsearch:${query}`; // Plain text search
+            }
 
             const result = await client.manager.resolve(resolveQuery, interaction.user);
-            
+
             if (!result || !result.tracks.length) {
-                return interaction.editReply({ embeds: [errorEmbed('No results found for your query.')] });
+                return interaction.editReply({ embeds: [errorEmbed('No results found. If you used a Spotify link, make sure your Spotify credentials are set in Dockge .env!')] });
             }
 
             if (result.type === 'playlist') {
                 for (const track of result.tracks) {
                     player.queue.push(track);
                 }
-                interaction.editReply({ embeds: [successEmbed(`Added ${result.tracks.length} tracks from **${result.playlistName}** to the queue.`)] });
+                interaction.editReply({ embeds: [successEmbed(`Added **${result.tracks.length}** tracks from **${result.playlistName}** to the queue.`)] });
             } else {
                 const track = result.tracks[0];
                 player.queue.push(track);
@@ -65,9 +79,9 @@ module.exports = {
             }
 
         } catch (error) {
-            console.error(error);
-            const errorMessage = error.message ? error.message : 'Unknown error';
-            interaction.editReply({ embeds: [errorEmbed(`An error occurred while trying to play the track: \n\`${errorMessage}\``)] });
+            console.error('[Play Command Error]', error);
+            const msg = error.message || 'Something went wrong while looking up the track.';
+            interaction.editReply({ embeds: [errorEmbed(`An error occurred while trying to play the track:\n\`${msg}\``)] });
         }
     }
 };

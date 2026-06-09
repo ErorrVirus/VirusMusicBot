@@ -109,23 +109,49 @@ class MusicManager extends EventEmitter {
         const node = this.shoukaku.options.nodeResolver(this.shoukaku.nodes);
         if (!node) throw new Error('No Lavalink nodes available');
 
-        const result = await node.rest.resolve(query);
-        if (!result) return null;
-
-        if (result.loadType === 'track' || result.loadType === 'search') {
-            const tracks = result.loadType === 'search' ? [result.data[0]] : [result.data];
-            tracks.forEach(t => t.requester = requester);
-            return { type: result.loadType, tracks, playlistName: null };
-        } else if (result.loadType === 'playlist') {
-            const tracks = result.data.tracks || [];
-            tracks.forEach(t => t.requester = requester);
-            return { type: 'playlist', tracks: tracks, playlistName: result.data.info?.name || 'Unknown Playlist' };
-        } else if (result.loadType === 'error') {
-            console.error('Lavalink Raw Error Payload:', JSON.stringify(result, null, 2));
-            throw new Error(result.data?.message || 'Lavalink encountered an error resolving the track.');
+        let result;
+        try {
+            result = await node.rest.resolve(query);
+        } catch (err) {
+            console.error('[Resolve] REST error:', err);
+            throw new Error('Failed to contact Lavalink. Is the node online?');
         }
 
-        return null;
+        if (!result) return null;
+
+        console.log(`[Resolve] loadType=${result.loadType} query="${query}"`);
+
+        switch (result.loadType) {
+            case 'track': {
+                const track = result.data;
+                track.requester = requester;
+                return { type: 'track', tracks: [track], playlistName: null };
+            }
+            case 'search': {
+                if (!result.data || !result.data.length) return null;
+                const track = result.data[0];
+                track.requester = requester;
+                return { type: 'search', tracks: [track], playlistName: null };
+            }
+            case 'playlist': {
+                const tracks = result.data.tracks || [];
+                tracks.forEach(t => t.requester = requester);
+                const name = result.data.info?.name || result.data.pluginInfo?.name || 'Unknown Playlist';
+                return { type: 'playlist', tracks, playlistName: name };
+            }
+            case 'empty': {
+                console.warn('[Resolve] Lavalink returned empty result for:', query);
+                return null;
+            }
+            case 'error': {
+                console.error('[Resolve] Lavalink error payload:', JSON.stringify(result, null, 2));
+                throw new Error(result.data?.message || 'Lavalink encountered an error resolving the track.');
+            }
+            default: {
+                console.warn('[Resolve] Unknown loadType:', result.loadType, JSON.stringify(result, null, 2));
+                return null;
+            }
+        }
     }
 }
 
