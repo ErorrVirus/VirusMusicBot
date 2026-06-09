@@ -2,10 +2,11 @@ const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed, buildEmbed } = require('../utils/embedBuilder');
 const { getPlaylistTracks, getAlbumTracks, toSearchQuery } = require('../utils/spotifyHelper');
 
-// Regex patterns for different URL types
-const SPOTIFY_PLAYLIST = /open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/;
-const SPOTIFY_ALBUM    = /open\.spotify\.com\/album\/([A-Za-z0-9]+)/;
-const SPOTIFY_TRACK    = /open\.spotify\.com\/track\/([A-Za-z0-9]+)/;
+// Regex patterns — handles localized Spotify URLs e.g. /intl-ar/, /en/, /tr/ etc.
+const LOCALE         = '(?:\\/[a-zA-Z]{2}(?:-[a-zA-Z0-9]+)?)?';
+const SPOTIFY_PLAYLIST = new RegExp(`open\\.spotify\\.com${LOCALE}\\/playlist\\/([A-Za-z0-9]+)`);
+const SPOTIFY_ALBUM    = new RegExp(`open\\.spotify\\.com${LOCALE}\\/album\\/([A-Za-z0-9]+)`);
+const SPOTIFY_TRACK    = new RegExp(`open\\.spotify\\.com${LOCALE}\\/track\\/([A-Za-z0-9]+)`);
 const URL_REGEX        = /^https?:\/\//;
 
 module.exports = {
