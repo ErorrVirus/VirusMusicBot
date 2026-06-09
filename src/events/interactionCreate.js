@@ -26,17 +26,9 @@ module.exports = {
                             if (player.current && player.current.info) {
                                 const { ActivityType } = require('discord.js');
                                 if (player.isPaused) {
-                                    client.user.setActivity({
-                                        type: ActivityType.Custom,
-                                        name: 'custom',
-                                        state: `Paused: ${player.current.info.title} | Coded by ErorrVirus 💻`
-                                    });
+                                    client.user.setActivity(`paused: ${player.current.info.title}`, { type: ActivityType.Playing });
                                 } else {
-                                    client.user.setActivity({
-                                        type: ActivityType.Custom,
-                                        name: 'custom',
-                                        state: `Playing Now: ${player.current.info.title} | Coded by ErorrVirus 💻`
-                                    });
+                                    client.user.setActivity(player.current.info.title, { type: ActivityType.Playing });
                                 }
                             }
 

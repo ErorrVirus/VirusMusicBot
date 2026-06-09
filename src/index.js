@@ -17,11 +17,7 @@ const client = new Client({
 
 client.once('ready', () => {
     console.log(`✅ [Bot] Logged in as ${client.user.tag}`);
-    client.user.setActivity({
-        type: ActivityType.Custom,
-        name: 'custom',
-        state: 'Ready to play any song | Coded by ErorrVirus 💻'
-    });
+    client.user.setActivity('ready to play any song', { type: ActivityType.Playing });
 });
 
 // Initialize Music Manager
