@@ -34,6 +34,7 @@ services:
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.2.2
     container_name: virusmusicbot_lavalink
+    user: "root"
     restart: unless-stopped
     networks:
       - virusmusicbot_net
