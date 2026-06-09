@@ -10,7 +10,10 @@ async function getSpotifyToken() {
 
     const clientId = process.env.SPOTIFY_CLIENT_ID;
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    if (!clientId || !clientSecret) return null;
+    if (!clientId || !clientSecret) {
+        console.error('[Spotify] Missing SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET env vars!');
+        return null;
+    }
 
     const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const res = await fetch('https://accounts.spotify.com/api/token', {
@@ -23,7 +26,8 @@ async function getSpotifyToken() {
     });
 
     if (!res.ok) {
-        console.error('[Spotify] Failed to get token:', res.status, await res.text());
+        const body = await res.text();
+        console.error('[Spotify] Failed to get token:', res.status, body);
         return null;
     }
 
@@ -32,15 +36,23 @@ async function getSpotifyToken() {
         token: data.access_token,
         expires: Date.now() + (data.expires_in - 60) * 1000
     };
+    console.log('[Spotify] Got new access token, expires in', data.expires_in, 'seconds');
     return tokenCache.token;
 }
 
 async function spotifyGet(url) {
     const token = await getSpotifyToken();
     if (!token) return null;
-    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+    const res = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    });
     if (!res.ok) {
-        console.error('[Spotify] API error:', res.status, url);
+        const body = await res.text();
+        console.error('[Spotify] API error:', res.status, url, body);
         return null;
     }
     return res.json();
@@ -48,26 +60,29 @@ async function spotifyGet(url) {
 
 /**
  * Fetch all tracks from a Spotify playlist.
- * Returns an array of simplified track objects: { name, artists, duration_ms }
+ * NOTE: No "fields" filter — Spotify 403's on filtered requests for some apps.
  */
 async function getPlaylistTracks(playlistId) {
+    // Fetch playlist info (no fields filter)
     const info = await spotifyGet(
-        `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,tracks.total`
+        `https://api.spotify.com/v1/playlists/${playlistId}?market=US`
     );
     if (!info) return { name: 'Unknown Playlist', tracks: [] };
 
     const tracks = [];
-    let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=next,items(track(name,artists(name),duration_ms,is_local))`;
+    // No "fields" parameter — causes 403 on restricted Spotify apps
+    let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&market=US`;
 
     while (url) {
         const page = await spotifyGet(url);
         if (!page) break;
         for (const item of (page.items || [])) {
-            if (item?.track && !item.track.is_local && item.track.name) {
-                tracks.push(item.track);
+            const track = item?.track;
+            if (track && !track.is_local && track.name) {
+                tracks.push(track);
             }
         }
-        url = page.next;
+        url = page.next || null;
     }
 
     return { name: info.name || 'Spotify Playlist', tracks };
@@ -75,20 +90,21 @@ async function getPlaylistTracks(playlistId) {
 
 /**
  * Fetch all tracks from a Spotify album.
- * Returns an array of simplified track objects: { name, artists, duration_ms }
  */
 async function getAlbumTracks(albumId) {
-    const info = await spotifyGet(`https://api.spotify.com/v1/albums/${albumId}`);
+    const info = await spotifyGet(`https://api.spotify.com/v1/albums/${albumId}?market=US`);
     if (!info) return { name: 'Unknown Album', tracks: [] };
 
     const tracks = [];
-    let url = `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=50`;
+    let url = `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=50&market=US`;
 
     while (url) {
         const page = await spotifyGet(url);
         if (!page) break;
-        tracks.push(...(page.items || []).filter(t => t?.name));
-        url = page.next;
+        for (const track of (page.items || [])) {
+            if (track?.name) tracks.push(track);
+        }
+        url = page.next || null;
     }
 
     return { name: `${info.name} — ${info.artists?.[0]?.name || ''}`, tracks };
