@@ -41,14 +41,53 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     volumes:
-      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
       - lavalink_plugins:/opt/Lavalink/plugins
     environment:
-      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
-      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
-      - SPOTIFY_SPDC=${SPOTIFY_SPDC}
-      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true
+      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US
+      # Server
+      - SERVER_PORT=2333
+      - SERVER_ADDRESS=0.0.0.0
+      # Auth
+      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      # Sources (disable default YouTube, use plugin instead)
+      - LAVALINK_SERVER_SOURCES_YOUTUBE=false
+      - LAVALINK_SERVER_SOURCES_BANDCAMP=true
+      - LAVALINK_SERVER_SOURCES_SOUNDCLOUD=true
+      - LAVALINK_SERVER_SOURCES_TWITCH=true
+      - LAVALINK_SERVER_SOURCES_VIMEO=true
+      - LAVALINK_SERVER_SOURCES_HTTP=true
+      - LAVALINK_SERVER_SOURCES_LOCAL=false
+      # Plugins to download
+      - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:1.18.1
+      - LAVALINK_PLUGINS_0_REPOSITORY=https://maven.lavalink.dev/releases
+      - LAVALINK_PLUGINS_1_DEPENDENCY=com.github.topi314.lavasrc:lavasrc-plugin:4.8.3
+      - LAVALINK_PLUGINS_1_REPOSITORY=https://maven.lavalink.dev/releases
+      # YouTube plugin config
+      - PLUGINS_YOUTUBE_ENABLED=true
+      - PLUGINS_YOUTUBE_ALLOWSEARCH=true
+      - PLUGINS_YOUTUBE_ALLOWDIRECTVIDEOIDS=true
+      - PLUGINS_YOUTUBE_ALLOWDIRECTPLAYLISTIDS=true
+      - PLUGINS_YOUTUBE_CLIENTS_0=TVHTML5_SIMPLY
+      - PLUGINS_YOUTUBE_CLIENTS_1=WEB
+      - PLUGINS_YOUTUBE_CLIENTS_2=ANDROID_VR
+      # LavaSrc search providers
+      - PLUGINS_LAVASRC_PROVIDERS_0=ytsearch:"%ISRC%"
+      - PLUGINS_LAVASRC_PROVIDERS_1=ytsearch:%QUERY%
+      # LavaSrc enabled sources
+      - PLUGINS_LAVASRC_SOURCES_SPOTIFY=true
+      - PLUGINS_LAVASRC_SOURCES_APPLEMUSIC=true
+      - PLUGINS_LAVASRC_SOURCES_DEEZER=false
+      - PLUGINS_LAVASRC_SOURCES_YANDEXMUSIC=false
+      - PLUGINS_LAVASRC_SOURCES_FLOWERYTTS=false
+      - PLUGINS_LAVASRC_SOURCES_YOUTUBE=false
+      # Spotify credentials (use BOTH methods for best compatibility)
+      - PLUGINS_LAVASRC_SPOTIFY_CLIENTID=${SPOTIFY_CLIENT_ID}
+      - PLUGINS_LAVASRC_SPOTIFY_CLIENTSECRET=${SPOTIFY_CLIENT_SECRET}
+      - PLUGINS_LAVASRC_SPOTIFY_SPDC=${SPOTIFY_SPDC}
+      - PLUGINS_LAVASRC_SPOTIFY_PREFERPARTNERAPI=true
+      - PLUGINS_LAVASRC_SPOTIFY_COUNTRYCODE=US
+      - PLUGINS_LAVASRC_SPOTIFY_PLAYLISTLOADLIMIT=6
+      - PLUGINS_LAVASRC_SPOTIFY_ALBUMLOADLIMIT=6
 
 volumes:
   lavalink_plugins:
