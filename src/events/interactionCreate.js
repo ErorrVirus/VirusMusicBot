@@ -33,6 +33,10 @@ module.exports = {
 
                             return interaction.reply({ content: player.isPaused ? '⏸️ Paused the music.' : '▶️ Resumed the music.', ephemeral: true });
                         
+                        case 'music_skip':
+                            player.player.stopTrack(); // triggers 'end' event which calls playNext() automatically
+                            return interaction.reply({ content: '⏭️ Skipped the track!', ephemeral: true });
+
                         case 'music_stop':
                             player.destroy();
                             return interaction.reply({ content: '⏹️ Stopped the music and cleared the queue.', ephemeral: true });

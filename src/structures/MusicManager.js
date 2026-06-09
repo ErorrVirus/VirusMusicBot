@@ -65,6 +65,7 @@ class MusicManager extends EventEmitter {
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('music_pause').setEmoji('⏯️').setStyle(ButtonStyle.Primary),
                 new ButtonBuilder().setCustomId('music_stop').setEmoji('⏹️').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId('music_skip').setEmoji('⏭️').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId('music_voldown').setEmoji('🔉').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId('music_volup').setEmoji('🔊').setStyle(ButtonStyle.Secondary)
             );
@@ -74,9 +75,13 @@ class MusicManager extends EventEmitter {
         });
 
         this.on('playerEmpty', (player) => {
-            // Clear Bot Activity
+            // Restore Bot Activity
             const { ActivityType } = require('discord.js');
-            this.client.user.setActivity('for music commands', { type: ActivityType.Listening });
+            this.client.user.setActivity({
+                type: ActivityType.Custom,
+                name: 'custom',
+                state: 'Coded by ErorrVirus 💻'
+            });
             
             const channel = this.client.channels.cache.get(player.textId);
             if (channel) {
