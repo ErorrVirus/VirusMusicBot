@@ -33,8 +33,8 @@ async function getAlbumTracks(albumId) {
 }
 
 function toSearchQuery(track) {
-    const artists = (track.artists || []).map(a => a.name).join(' ');
-    return `ytsearch:${track.name} ${artists}`;
+    const artist = track.artist || '';
+    return `ytsearch:${track.name} ${artist} audio`;
 }
 
 module.exports = { getPlaylistTracks, getAlbumTracks, toSearchQuery };
