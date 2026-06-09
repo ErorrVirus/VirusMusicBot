@@ -33,31 +33,57 @@ class MusicManager extends EventEmitter {
         this.shoukaku.on('disconnect', (name, count) => console.warn(`[Lavalink] Node ${name} disconnected. Reconnecting... (Attempt ${count})`));
         
         // Handle events emitted by MusicPlayer
-        this.on('playerStart', (player, track) => {
+        this.on('playerStart', async (player, track) => {
             const channel = this.client.channels.cache.get(player.textId);
             if (!channel) return;
             const { buildEmbed } = require('../utils/embedBuilder');
             const { formatTime } = require('../utils/helpers');
+            const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType } = require('discord.js');
+            
+            // Set Bot Activity
+            this.client.user.setActivity(track.info.title, { type: ActivityType.Listening });
             
             const embed = buildEmbed({
-                title: '🎶 Now Playing',
-                description: `[**${track.info.title}**](${track.info.uri})`,
-                thumbnail: track.info.artworkUrl || null,
+                author: { 
+                    name: 'Now Playing', 
+                    iconURL: 'https://cdn.discordapp.com/emojis/1105021295240560700.gif' // Or whatever icon
+                },
+                title: track.info.title,
+                url: track.info.uri,
+                thumbnail: track.info.artworkUrl || 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?q=80&w=200&auto=format&fit=crop',
                 fields: [
-                    { name: 'Author', value: track.info.author, inline: true },
-                    { name: 'Duration', value: track.info.isStream ? 'LIVE' : formatTime(track.info.length), inline: true },
-                    { name: 'Requested By', value: `<@${track.requester.id}>`, inline: true }
-                ]
+                    { name: '👤 Author', value: `\`${track.info.author}\``, inline: true },
+                    { name: '⏱️ Duration', value: `\`${track.info.isStream ? 'LIVE' : formatTime(track.info.length)}\``, inline: true },
+                    { name: '🎧 Requested By', value: `<@${track.requester.id}>`, inline: true }
+                ],
+                footer: {
+                    text: 'Coded by ErorrVirus',
+                    iconURL: this.client.user.displayAvatarURL()
+                }
             });
-            channel.send({ embeds: [embed] }).catch(() => {});
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('music_pause').setEmoji('⏯️').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('music_stop').setEmoji('⏹️').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId('music_voldown').setEmoji('🔉').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('music_volup').setEmoji('🔊').setStyle(ButtonStyle.Secondary)
+            );
+
+            // Store message so we can delete/edit it later if needed, but not strictly required
+            channel.send({ embeds: [embed], components: [row] }).catch(() => {});
         });
 
         this.on('playerEmpty', (player) => {
+            // Clear Bot Activity
+            const { ActivityType } = require('discord.js');
+            this.client.user.setActivity('for music commands', { type: ActivityType.Listening });
+            
             const channel = this.client.channels.cache.get(player.textId);
             if (channel) {
                 const { buildEmbed } = require('../utils/embedBuilder');
                 channel.send({ embeds: [buildEmbed({ description: 'Queue concluded. Disconnecting in 1 minute if no tracks are added.' })] }).catch(() => {});
             }
+
             
             player.connectionTimeout = setTimeout(() => {
                 if (player && !player.current) {

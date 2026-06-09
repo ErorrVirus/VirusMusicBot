@@ -3,6 +3,58 @@ const { errorEmbed } = require('../utils/embedBuilder');
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction, client) {
+        if (interaction.isButton()) {
+            // Handle music buttons
+            if (interaction.customId.startsWith('music_')) {
+                const player = client.manager.getPlayer(interaction.guild.id);
+                if (!player) {
+                    return interaction.reply({ content: 'No music is currently playing!', ephemeral: true });
+                }
+
+                // Check voice channel
+                if (!interaction.member.voice.channelId || interaction.member.voice.channelId !== interaction.guild.members.me.voice.channelId) {
+                    return interaction.reply({ content: 'You must be in the same voice channel as me to use these buttons!', ephemeral: true });
+                }
+
+                try {
+                    switch (interaction.customId) {
+                        case 'music_pause':
+                            player.isPaused = !player.isPaused;
+                            await player.player.setPaused(player.isPaused);
+                            
+                            // Update activity
+                            if (player.current && player.current.info) {
+                                if (player.isPaused) {
+                                    client.user.setActivity(`Paused: ${player.current.info.title}`, { type: require('discord.js').ActivityType.Listening });
+                                } else {
+                                    client.user.setActivity(player.current.info.title, { type: require('discord.js').ActivityType.Listening });
+                                }
+                            }
+
+                            return interaction.reply({ content: player.isPaused ? '⏸️ Paused the music.' : '▶️ Resumed the music.', ephemeral: true });
+                        
+                        case 'music_stop':
+                            player.destroy();
+                            return interaction.reply({ content: '⏹️ Stopped the music and cleared the queue.', ephemeral: true });
+                        
+                        case 'music_voldown':
+                            player.volume = Math.max(0, player.volume - 10);
+                            await player.player.setGlobalVolume(player.volume);
+                            return interaction.reply({ content: `🔉 Volume decreased to **${player.volume}%**`, ephemeral: true });
+                        
+                        case 'music_volup':
+                            player.volume = Math.min(100, player.volume + 10);
+                            await player.player.setGlobalVolume(player.volume);
+                            return interaction.reply({ content: `🔊 Volume increased to **${player.volume}%**`, ephemeral: true });
+                    }
+                } catch (err) {
+                    console.error('Button error:', err);
+                    return interaction.reply({ content: 'An error occurred!', ephemeral: true });
+                }
+            }
+            return;
+        }
+
         if (!interaction.isChatInputCommand()) return;
 
         const command = client.commands.get(interaction.commandName);
