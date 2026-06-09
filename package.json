@@ -10,7 +10,9 @@
   "dependencies": {
     "discord.js": "^14.16.2",
     "dotenv": "^16.4.5",
-    "shoukaku": "^4.3.0"
+    "shoukaku": "^4.3.0",
+    "spotify-uri": "^4.1.0",
+    "spotify-url-info": "^3.3.0"
   },
   "author": "Antigravity",
   "license": "ISC"
