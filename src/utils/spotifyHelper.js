@@ -40,7 +40,18 @@ async function getArtistTracks(artistId) {
     try {
         const url = `https://open.spotify.com/artist/${artistId}`;
         const data = await getData(url);
-        const tracks = await getTracks(url);
+        
+        let tracks = [];
+        if (data && data.trackList) {
+            tracks = data.trackList.map(t => ({
+                name: t.title,
+                artist: t.subtitle
+            }));
+        } else {
+            // Fallback just in case
+            const rawTracks = await getTracks(url);
+            tracks = rawTracks.filter(t => t && t.name);
+        }
         
         return { 
             name: data?.name ? `${data.name} — Top Tracks` : 'Unknown Artist', 
