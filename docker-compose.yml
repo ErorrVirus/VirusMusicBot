@@ -30,6 +30,8 @@ services:
       - LAVALINK_HOST=virusmusicbot_lavalink
       - LAVALINK_PORT=2333
       - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.2.2
