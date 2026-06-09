@@ -20,7 +20,7 @@ client.once('ready', () => {
     client.user.setActivity({
         type: ActivityType.Custom,
         name: 'custom',
-        state: 'Coded by ErorrVirus 💻'
+        state: 'Ready to play any song | Coded by ErorrVirus 💻'
     });
 });
 

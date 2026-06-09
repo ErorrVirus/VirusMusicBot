@@ -24,10 +24,19 @@ module.exports = {
                             
                             // Update activity
                             if (player.current && player.current.info) {
+                                const { ActivityType } = require('discord.js');
                                 if (player.isPaused) {
-                                    client.user.setActivity(`Paused: ${player.current.info.title}`, { type: require('discord.js').ActivityType.Listening });
+                                    client.user.setActivity({
+                                        type: ActivityType.Custom,
+                                        name: 'custom',
+                                        state: `Paused: ${player.current.info.title} | Coded by ErorrVirus 💻`
+                                    });
                                 } else {
-                                    client.user.setActivity(player.current.info.title, { type: require('discord.js').ActivityType.Listening });
+                                    client.user.setActivity({
+                                        type: ActivityType.Custom,
+                                        name: 'custom',
+                                        state: `Playing Now: ${player.current.info.title} | Coded by ErorrVirus 💻`
+                                    });
                                 }
                             }
 

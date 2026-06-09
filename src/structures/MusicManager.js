@@ -41,7 +41,11 @@ class MusicManager extends EventEmitter {
             const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType } = require('discord.js');
             
             // Set Bot Activity
-            this.client.user.setActivity(track.info.title, { type: ActivityType.Listening });
+            this.client.user.setActivity({
+                type: ActivityType.Custom,
+                name: 'custom',
+                state: `Playing Now: ${track.info.title} | Coded by ErorrVirus 💻`
+            });
             
             const embed = buildEmbed({
                 author: { 
@@ -80,7 +84,7 @@ class MusicManager extends EventEmitter {
             this.client.user.setActivity({
                 type: ActivityType.Custom,
                 name: 'custom',
-                state: 'Coded by ErorrVirus 💻'
+                state: 'Ready to play any song | Coded by ErorrVirus 💻'
             });
             
             const channel = this.client.channels.cache.get(player.textId);
