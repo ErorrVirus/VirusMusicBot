@@ -1,11 +1,12 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed, buildEmbed } = require('../utils/embedBuilder');
-const { getPlaylistTracks, getAlbumTracks, toSearchQuery } = require('../utils/spotifyHelper');
+const { getPlaylistTracks, getAlbumTracks, getArtistTracks, toSearchQuery } = require('../utils/spotifyHelper');
 
 // Regex patterns — handles localized Spotify URLs e.g. /intl-ar/, /en/, /tr/ etc.
 const LOCALE         = '(?:\\/[a-zA-Z]{2}(?:-[a-zA-Z0-9]+)?)?';
 const SPOTIFY_PLAYLIST = new RegExp(`open\\.spotify\\.com${LOCALE}\\/playlist\\/([A-Za-z0-9]+)`);
 const SPOTIFY_ALBUM    = new RegExp(`open\\.spotify\\.com${LOCALE}\\/album\\/([A-Za-z0-9]+)`);
+const SPOTIFY_ARTIST   = new RegExp(`open\\.spotify\\.com${LOCALE}\\/artist\\/([A-Za-z0-9]+)`);
 const SPOTIFY_TRACK    = new RegExp(`open\\.spotify\\.com${LOCALE}\\/track\\/([A-Za-z0-9]+)`);
 const URL_REGEX        = /^https?:\/\//;
 
@@ -124,6 +125,44 @@ module.exports = {
             } catch (err) {
                 console.error('[Play] Spotify album error:', err);
                 interaction.editReply({ embeds: [errorEmbed(`Failed to load album:\n\`${err.message}\``)] });
+            }
+            return;
+        }
+
+        // ── SPOTIFY ARTIST ────────────────────────────────────────────────────
+        const artistMatch = query.match(SPOTIFY_ARTIST);
+        if (artistMatch) {
+            try {
+                const player = await getPlayer();
+                await interaction.editReply({ embeds: [buildEmbed({ description: '🔍 Fetching artist top tracks from Spotify...' })] });
+
+                const { name, tracks } = await getArtistTracks(artistMatch[1]);
+
+                if (!tracks.length) {
+                    return interaction.editReply({ embeds: [errorEmbed('Could not load the artist top tracks. Is the Spotify link correct?')] });
+                }
+
+                await interaction.editReply({ embeds: [successEmbed(`🎤 Loading **${tracks.length}** top tracks from **${name}**...`)] });
+
+                (async () => {
+                    const BATCH = 5;
+                    for (let i = 0; i < tracks.length; i += BATCH) {
+                        const batch = tracks.slice(i, i + BATCH);
+                        const results = await Promise.allSettled(
+                            batch.map(t => client.manager.resolve(toSearchQuery(t), interaction.user))
+                        );
+                        for (const r of results) {
+                            if (r.status === 'fulfilled' && r.value?.tracks?.length) {
+                                player.queue.push(r.value.tracks[0]);
+                                if (!player.current) player.playNext();
+                            }
+                        }
+                    }
+                })();
+
+            } catch (err) {
+                console.error('[Play] Spotify artist error:', err);
+                interaction.editReply({ embeds: [errorEmbed(`Failed to load artist tracks:\n\`${err.message}\``)] });
             }
             return;
         }

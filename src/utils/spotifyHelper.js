@@ -36,5 +36,20 @@ function toSearchQuery(track) {
     const artist = track.artist || '';
     return `ytsearch:${track.name} ${artist} audio`;
 }
+async function getArtistTracks(artistId) {
+    try {
+        const url = `https://open.spotify.com/artist/${artistId}`;
+        const data = await getData(url);
+        const tracks = await getTracks(url);
+        
+        return { 
+            name: data?.name ? `${data.name} — Top Tracks` : 'Unknown Artist', 
+            tracks: tracks.filter(t => t && t.name)
+        };
+    } catch (err) {
+        console.error('[Spotify] Error fetching artist:', err);
+        return { name: 'Unknown Artist', tracks: [] };
+    }
+}
 
-module.exports = { getPlaylistTracks, getAlbumTracks, toSearchQuery };
+module.exports = { getPlaylistTracks, getAlbumTracks, getArtistTracks, toSearchQuery };
