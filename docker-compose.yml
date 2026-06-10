@@ -22,6 +22,8 @@ services:
       until curl -sf -H 'Authorization: ${LAVALINK_PASSWORD:-youshallnotpass}' http://virusmusicbot_lavalink:2333/version; do sleep 5; done &&
       echo 'Lavalink ready! Starting bot...' &&
       node src/index.js"
+    ports:
+      - "4000:4000"
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DISCORD_TOKEN}
@@ -33,6 +35,8 @@ services:
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - SPOTIFY_SPDC=${SPOTIFY_SPDC}
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASS=${DASHBOARD_PASS:-admin123}
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.2.2
