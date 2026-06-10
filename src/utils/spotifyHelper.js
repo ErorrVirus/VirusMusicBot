@@ -17,6 +17,32 @@ let _tokenExpiry = 0;
 async function getSpotifyToken(seedId, type = 'playlist') {
     if (_cachedToken && Date.now() < _tokenExpiry) return _cachedToken;
 
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+    if (clientId && clientSecret) {
+        try {
+            const resp = await fetchWithTimeout('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+                },
+                body: 'grant_type=client_credentials'
+            }, 8000);
+            
+            if (resp.ok) {
+                const data = await resp.json();
+                _cachedToken = data.access_token;
+                _tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000;
+                console.log('[Spotify] Got official API access token');
+                return _cachedToken;
+            }
+        } catch (err) {
+            console.error('[Spotify] Official token fetch failed:', err.message);
+        }
+    }
+
     try {
         const embedId = seedId || '37i9dQZF1DXcBWIGoYBM5M';
         const resp = await fetchWithTimeout(
@@ -242,9 +268,30 @@ async function getArtistTracks(artistId) {
     }
 }
 
+async function getSingleTrack(trackId) {
+    try {
+        const token = await getSpotifyToken(trackId, 'track');
+        if (token) {
+            const resp = await fetchWithTimeout(`https://api.spotify.com/v1/tracks/${trackId}`, { headers: { 'Authorization': `Bearer ${token}` } }, 8000);
+            if (resp.ok) {
+                const data = await resp.json();
+                return { name: data.name, artist: data.artists[0]?.name || '' };
+            }
+        }
+        
+        // Fallback
+        const { getData } = require('spotify-url-info')(fetch);
+        const data = await getData(`https://open.spotify.com/track/${trackId}`);
+        return { name: data?.title || data?.name || '', artist: data?.subtitle || data?.artists?.[0]?.name || '' };
+    } catch (err) {
+        console.error('[Spotify] Error fetching single track:', err.message);
+        return null;
+    }
+}
+
 function toSearchQuery(track) {
     const artist = track.artist || '';
     return `ytsearch:${track.name} ${artist} audio`;
 }
 
-module.exports = { getPlaylistTracks, getAlbumTracks, getArtistTracks, toSearchQuery };
+module.exports = { getPlaylistTracks, getAlbumTracks, getArtistTracks, getSingleTrack, toSearchQuery };

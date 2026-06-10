@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed, buildEmbed } = require('../utils/embedBuilder');
-const { getPlaylistTracks, getAlbumTracks, getArtistTracks, toSearchQuery } = require('../utils/spotifyHelper');
+const { getPlaylistTracks, getAlbumTracks, getArtistTracks, getSingleTrack, toSearchQuery } = require('../utils/spotifyHelper');
 
 // Detect localized Spotify URLs so we can clean them for LavaSrc
 const LOCALE_REGEX = /spotify\.com\/[a-zA-Z]{2}(?:-[a-zA-Z0-9]+)?\//;
@@ -148,13 +148,15 @@ module.exports = {
             if (SPOTIFY_URL.test(query)) {
                 // If it's a Spotify track, let LavaSrc try. If LavaSrc timed out, they can use names.
                 // We will convert Spotify track to ytsearch string to bypass LavaSrc TCP timeout!
-                if (SPOTIFY_TRACK.test(query)) {
+                const trackMatch = query.match(SPOTIFY_TRACK);
+                if (trackMatch) {
                     try {
-                        const { getData } = require('spotify-url-info')(fetch);
-                        const data = await getData(query);
-                        const trackName = data?.title || data?.name || '';
-                        const artist = data?.subtitle || data?.artists?.[0]?.name || '';
-                        resolveQuery = `ytsearch:${trackName} ${artist} audio`;
+                        const data = await getSingleTrack(trackMatch[1]);
+                        if (data && data.name) {
+                            resolveQuery = `ytsearch:${data.name} ${data.artist} audio`;
+                        } else {
+                            resolveQuery = query;
+                        }
                     } catch {
                         resolveQuery = query;
                     }
