@@ -1,9 +1,29 @@
 const express = require('express');
 const basicAuth = require('express-basic-auth');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 module.exports = (client) => {
     const app = express();
     const port = 4000;
+
+    // Security: Protect HTTP Headers (but allow inline scripts for our autorefresh)
+    app.use(helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+            },
+        },
+    }));
+
+    // Security: Prevent brute-force password guessing
+    const limiter = rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        max: 50, // Limit each IP to 50 requests per window
+        message: 'Too many login attempts from this IP, please try again after 15 minutes.'
+    });
+    app.use(limiter);
 
     const user = process.env.DASHBOARD_USER || 'admin';
     const pass = process.env.DASHBOARD_PASS || 'admin123';
