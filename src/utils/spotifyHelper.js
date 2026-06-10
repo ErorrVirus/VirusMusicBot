@@ -1,56 +1,36 @@
 const { getTracks, getData } = require('spotify-url-info')(fetch);
 
-// ── Spotify Anonymous Token (Web Player Approach) ─────────────────────────────
-// Gets a short-lived anonymous access token from Spotify's web player endpoint.
-// This is the same token the embed player uses. No login needed.
+// ── Spotify Anonymous Token (Embed Page Extraction) ──────────────────────
+// Extracts a short-lived access token directly from Spotify's embed page HTML.
+// Works universally on any network — no special blocked endpoints needed.
 let _cachedToken = null;
 let _tokenExpiry = 0;
 
-async function getSpotifyToken() {
+async function getSpotifyToken(seedId) {
     if (_cachedToken && Date.now() < _tokenExpiry) return _cachedToken;
 
     try {
-        // Step 1: Get client token
-        const clientResp = await fetch('https://clienttoken.spotify.com/v1/clienttoken', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({
-                client_data: {
-                    client_version: '1.2.52.442.g6c6c22e9',
-                    client_id: 'd8a5ed958d274c2e8ee717e6a4b0971d',
-                    js_sdk_data: {
-                        device_brand: 'unknown', device_id: 'unknown',
-                        device_model: 'unknown', device_type: 'computer',
-                        os: 'linux', os_version: 'unknown'
-                    }
-                }
-            })
+        // Fetch the embed page — the access token is baked into the HTML
+        const embedId = seedId || '37i9dQZF1DXcBWIGoYBM5M';
+        const resp = await fetch(`https://open.spotify.com/embed/playlist/${embedId}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36' }
         });
-        const clientData = await clientResp.json();
-        const clientToken = clientData.granted_token?.token;
-        if (!clientToken) throw new Error('No client token in response');
+        const html = await resp.text();
 
-        // Step 2: Exchange for access token
-        const accessResp = await fetch('https://open.spotify.com/get_access_token?reason=transport&productType=web_player', {
-            headers: {
-                'client-token': clientToken,
-                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-                'Referer': 'https://open.spotify.com/',
-                'spotify-app-version': '1.2.52.442.g6c6c22e9',
-                'app-platform': 'WebPlayer',
-            }
-        });
-        const accessData = await accessResp.json();
-        const accessToken = accessData.accessToken;
-        const expiresIn = accessData.accessTokenExpirationTimestampMs || (Date.now() + 3600000);
+        // Token is embedded as: "accessToken":"BQABC..."
+        const tokenMatch = html.match(/"accessToken":"([^"]+)"/);
+        if (!tokenMatch) throw new Error('Could not find accessToken in embed page');
 
-        if (!accessToken) throw new Error('No access token in response');
+        // Grab expiry: "accessTokenExpirationTimestampMs":1234567890
+        const expiryMatch = html.match(/"accessTokenExpirationTimestampMs":(\d+)/);
+        const expiry = expiryMatch ? parseInt(expiryMatch[1]) : (Date.now() + 3600000);
 
-        _cachedToken = accessToken;
-        _tokenExpiry = expiresIn - 60000; // Renew 1 min early
-        return accessToken;
+        _cachedToken = tokenMatch[1];
+        _tokenExpiry = expiry - 60000; // Renew 1 min early
+        console.log('[Spotify] Got access token from embed page');
+        return _cachedToken;
     } catch (err) {
-        console.error('[Spotify] Failed to get anonymous token:', err.message);
+        console.error('[Spotify] Failed to get token from embed page:', err.message);
         return null;
     }
 }
@@ -65,9 +45,17 @@ async function fetchAllPlaylistPages(playlistId, token) {
 
     while (true) {
         const url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?offset=${offset}&limit=${LIMIT}&fields=total,next,items(track(name,artists(name),duration_ms,uri,is_local))`;
-        const resp = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        
+        let resp;
+        let retries = 3;
+        while (retries-- > 0) {
+            resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (resp.status === 429) {
+                const retryAfter = parseInt(resp.headers.get('retry-after') || '2') * 1000;
+                console.warn(`[Spotify] Rate limited. Waiting ${retryAfter}ms...`);
+                await new Promise(r => setTimeout(r, retryAfter));
+            } else break;
+        }
 
         if (!resp.ok) {
             console.error(`[Spotify] API error at offset ${offset}: ${resp.status}`);
@@ -96,8 +84,8 @@ async function fetchAllPlaylistPages(playlistId, token) {
 
 async function getPlaylistTracks(playlistId) {
     try {
-        // Try paginated API first
-        const token = await getSpotifyToken();
+        // Try paginated API first — get token from this exact playlist's embed page
+        const token = await getSpotifyToken(playlistId);
         if (token) {
             const tracks = await fetchAllPlaylistPages(playlistId, token);
             if (tracks.length > 0) {
