@@ -44,12 +44,11 @@ async function getSpotifyToken(seedId) {
 
 // ── Paginated Playlist Fetcher ────────────────────────────────────────────────
 // Fetches ALL tracks from a public playlist by paginating the Spotify API.
-// Hard cap of 30 seconds total to avoid hanging Discord interactions.
 async function fetchAllPlaylistPages(playlistId, token) {
     const allTracks = [];
     let offset = 0;
     const LIMIT = 100;
-    const deadline = Date.now() + 30000; // 30s hard cap
+    const deadline = Date.now() + 60000; // 60s hard cap
 
     while (Date.now() < deadline) {
         const url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?offset=${offset}&limit=${LIMIT}&fields=total,next,items(track(name,artists(name),duration_ms,uri,is_local))`;
@@ -62,21 +61,20 @@ async function fetchAllPlaylistPages(playlistId, token) {
             break;
         }
 
-        // Handle rate limit — wait up to 5s max, then give up
+        // Handle rate limit — wait up to 10s, then retry once
         if (resp.status === 429) {
-            const retryAfter = Math.min(parseInt(resp.headers.get('retry-after') || '2'), 5) * 1000;
-            console.warn(`[Spotify] Rate limited. Waiting ${retryAfter}ms...`);
+            const retryAfter = Math.min(parseInt(resp.headers.get('retry-after') || '3'), 10) * 1000;
+            console.warn(`[Spotify] Rate limited at offset ${offset}. Waiting ${retryAfter}ms...`);
             await new Promise(r => setTimeout(r, retryAfter));
-            // Retry once more
             try {
                 resp = await fetchWithTimeout(url, { headers: { 'Authorization': `Bearer ${token}` } }, 8000);
-            } catch {
-                break;
-            }
+            } catch { break; }
         }
 
         if (!resp.ok) {
             console.error(`[Spotify] API error at offset ${offset}: ${resp.status}`);
+            // If first page failed, return empty so fallback can run
+            if (offset === 0) return [];
             break;
         }
 
@@ -93,6 +91,9 @@ async function fetchAllPlaylistPages(playlistId, token) {
 
         if (!page.next || allTracks.length >= page.total) break;
         offset += LIMIT;
+
+        // Small pause between pages to avoid hitting rate limit
+        await new Promise(r => setTimeout(r, 200));
     }
 
     return allTracks;

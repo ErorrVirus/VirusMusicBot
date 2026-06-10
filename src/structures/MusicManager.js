@@ -34,6 +34,12 @@ class MusicManager extends EventEmitter {
         
         // Handle events emitted by MusicPlayer
         this.on('playerStart', async (player, track) => {
+            // ── CRITICAL: cancel the idle-disconnect timer whenever a song starts ──
+            if (player.connectionTimeout) {
+                clearTimeout(player.connectionTimeout);
+                player.connectionTimeout = null;
+            }
+
             const channel = this.client.channels.cache.get(player.textId);
             if (!channel) return;
             const { buildEmbed } = require('../utils/embedBuilder');
