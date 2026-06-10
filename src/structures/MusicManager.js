@@ -60,7 +60,7 @@ class MusicManager extends EventEmitter {
                 fields: [
                     { name: '👤 Author', value: `\`${track.info.author}\``, inline: true },
                     { name: '⏱️ Duration', value: `\`${track.info.isStream ? 'LIVE' : formatTime(track.info.length)}\``, inline: true },
-                    { name: '🎧 Requested By', value: `<@${track.requester.id}>`, inline: true }
+                    { name: '🎧 Requested By', value: `<@${track.requester?.id || this.client.user.id}>`, inline: true }
                 ],
                 footer: {
                     text: 'Coded by ErorrVirus',

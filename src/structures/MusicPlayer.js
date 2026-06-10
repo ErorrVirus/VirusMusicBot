@@ -64,7 +64,7 @@ class MusicPlayer {
         // Just-In-Time (JIT) Resolving for Spotify bypass
         if (this.current.isUnresolved) {
             try {
-                const res = await this.manager.resolve(`ytsearch:${this.current.title} ${this.current.artist} audio`, null);
+                const res = await this.manager.resolve(`ytsearch:${this.current.title} ${this.current.artist} audio`, this.current.requester);
                 if (res && res.tracks.length) {
                     this.current = res.tracks[0];
                 } else {

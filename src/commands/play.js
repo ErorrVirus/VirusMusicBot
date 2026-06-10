@@ -73,7 +73,7 @@ module.exports = {
                 }
 
                 for (const t of tracks) {
-                    player.queue.push({ isUnresolved: true, title: t.name, artist: t.artist });
+                    player.queue.push({ isUnresolved: true, title: t.name, artist: t.artist, requester: interaction.user });
                 }
                 interaction.editReply({ embeds: [successEmbed(`📋 Added **${tracks.length}** tracks from **${name}** to the queue.`)] });
                 if (!player.current) player.playNext();
@@ -98,7 +98,7 @@ module.exports = {
                 }
 
                 for (const t of tracks) {
-                    player.queue.push({ isUnresolved: true, title: t.name, artist: t.artist });
+                    player.queue.push({ isUnresolved: true, title: t.name, artist: t.artist, requester: interaction.user });
                 }
                 interaction.editReply({ embeds: [successEmbed(`💿 Added **${tracks.length}** tracks from **${name}** to the queue.`)] });
                 if (!player.current) player.playNext();
@@ -123,7 +123,7 @@ module.exports = {
                 }
 
                 for (const t of tracks) {
-                    player.queue.push({ isUnresolved: true, title: t.name, artist: t.artist });
+                    player.queue.push({ isUnresolved: true, title: t.name, artist: t.artist, requester: interaction.user });
                 }
                 interaction.editReply({ embeds: [successEmbed(`🎤 Added **${tracks.length}** top tracks from **${name}** to the queue.`)] });
                 if (!player.current) player.playNext();
