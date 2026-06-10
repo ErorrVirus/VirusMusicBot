@@ -61,6 +61,23 @@ class MusicPlayer {
             this.current = this.queue.shift();
         }
 
+        // Just-In-Time (JIT) Resolving for Spotify bypass
+        if (this.current.isUnresolved) {
+            try {
+                const res = await this.manager.resolve(`ytsearch:${this.current.title} ${this.current.artist} audio`, null);
+                if (res && res.tracks.length) {
+                    this.current = res.tracks[0];
+                } else {
+                    // Skip if YouTube yields no results
+                    console.log(`[MusicPlayer] JIT Resolve failed for ${this.current.title}`);
+                    return this.playNext();
+                }
+            } catch (err) {
+                console.error('[MusicPlayer] JIT Resolve Error:', err.message);
+                return this.playNext();
+            }
+        }
+
         try {
             await this.player.playTrack({ track: { encoded: this.current.encoded } });
             await this.player.setGlobalVolume(this.volume);
