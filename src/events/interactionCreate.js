@@ -39,7 +39,7 @@ module.exports = {
                             return interaction.reply({ content: '⏭️ Skipped the track!', ephemeral: true });
 
                         case 'music_stop':
-                            player.destroy();
+                            player.destroy('Stop button pressed');
                             return interaction.reply({ content: '⏹️ Stopped the music and cleared the queue.', ephemeral: true });
                         
                         case 'music_voldown':

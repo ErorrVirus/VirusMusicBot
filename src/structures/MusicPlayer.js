@@ -104,7 +104,9 @@ class MusicPlayer {
         return true;
     }
 
-    destroy() {
+    destroy(reason = 'Unknown') {
+        console.log(`[MusicPlayer] Destroying player for guild ${this.guildId}. Reason: ${reason}`);
+        console.trace('Destroy trace');
         if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
         this.queue = [];
         this.previous = [];

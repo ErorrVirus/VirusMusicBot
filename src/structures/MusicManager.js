@@ -91,10 +91,10 @@ class MusicManager extends EventEmitter {
                 channel.send({ embeds: [buildEmbed({ description: 'Queue concluded. Disconnecting in 1 minute if no tracks are added.' })] }).catch(() => {});
             }
 
-            
+            if (player.connectionTimeout) clearTimeout(player.connectionTimeout);
             player.connectionTimeout = setTimeout(() => {
                 if (player && !player.current) {
-                    player.destroy();
+                    player.destroy('Idle timeout');
                 }
             }, 60000);
         });
