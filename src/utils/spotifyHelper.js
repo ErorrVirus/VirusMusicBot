@@ -14,13 +14,13 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 let _cachedToken = null;
 let _tokenExpiry = 0;
 
-async function getSpotifyToken(seedId) {
+async function getSpotifyToken(seedId, type = 'playlist') {
     if (_cachedToken && Date.now() < _tokenExpiry) return _cachedToken;
 
     try {
         const embedId = seedId || '37i9dQZF1DXcBWIGoYBM5M';
         const resp = await fetchWithTimeout(
-            `https://open.spotify.com/embed/playlist/${embedId}`,
+            `https://open.spotify.com/embed/${type}/${embedId}`,
             { headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36' } },
             8000 // 8 second timeout
         );
@@ -34,10 +34,10 @@ async function getSpotifyToken(seedId) {
 
         _cachedToken = tokenMatch[1];
         _tokenExpiry = expiry - 60000;
-        console.log('[Spotify] Got access token from embed page');
+        console.log(`[Spotify] Got access token from ${type} embed page`);
         return _cachedToken;
     } catch (err) {
-        console.error('[Spotify] Failed to get token from embed page:', err.message);
+        console.error(`[Spotify] Failed to get token from ${type} embed page:`, err.message);
         return null;
     }
 }
@@ -133,7 +133,7 @@ async function getPlaylistTracks(playlistId) {
 
 async function getAlbumTracks(albumId) {
     try {
-        const token = await getSpotifyToken();
+        const token = await getSpotifyToken(albumId, 'album');
         if (token) {
             const allTracks = [];
             let offset = 0;
@@ -194,6 +194,33 @@ async function getAlbumTracks(albumId) {
 
 async function getArtistTracks(artistId) {
     try {
+        const token = await getSpotifyToken(artistId, 'artist');
+        if (token) {
+            try {
+                // Fetch artist name
+                let artistName = 'Unknown Artist';
+                const artistResp = await fetchWithTimeout(`https://api.spotify.com/v1/artists/${artistId}`, { headers: { 'Authorization': `Bearer ${token}` } }, 8000);
+                if (artistResp.ok) {
+                    const artistData = await artistResp.json();
+                    artistName = artistData.name || artistName;
+                }
+
+                // Fetch top tracks
+                const tracksResp = await fetchWithTimeout(`https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=US`, { headers: { 'Authorization': `Bearer ${token}` } }, 8000);
+                if (tracksResp.ok) {
+                    const tracksData = await tracksResp.json();
+                    const tracks = (tracksData.tracks || [])
+                        .filter(t => t && t.name)
+                        .map(t => ({ name: t.name, artist: (t.artists || []).map(a => a.name).join(', ') }));
+
+                    if (tracks.length > 0) return { name: `${artistName} — Top Tracks`, tracks };
+                }
+            } catch (e) {
+                console.error('[Spotify] API Artist fetch error:', e.message);
+            }
+        }
+
+        // Fallback
         const url = `https://open.spotify.com/artist/${artistId}`;
         const data = await getData(url);
 
