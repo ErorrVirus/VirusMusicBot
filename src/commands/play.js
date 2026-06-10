@@ -81,6 +81,8 @@ module.exports = {
                                 if (!player.current) player.playNext();
                             }
                         }
+                        // ── CRITICAL: Delay between batches to prevent Lavalink CPU overload and 5000ms ping spikes ──
+                        await new Promise(r => setTimeout(r, 1500));
                     }
                 })();
 
@@ -119,6 +121,8 @@ module.exports = {
                                 if (!player.current) player.playNext();
                             }
                         }
+                        // ── CRITICAL: Delay between batches to prevent Lavalink CPU overload and 5000ms ping spikes ──
+                        await new Promise(r => setTimeout(r, 1500));
                     }
                 })();
 
@@ -157,6 +161,8 @@ module.exports = {
                                 if (!player.current) player.playNext();
                             }
                         }
+                        // ── CRITICAL: Delay between batches to prevent Lavalink CPU overload and 5000ms ping spikes ──
+                        await new Promise(r => setTimeout(r, 1500));
                     }
                 })();
 
