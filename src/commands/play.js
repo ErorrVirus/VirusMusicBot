@@ -184,13 +184,13 @@ module.exports = {
 
             let resolveQuery;
             if (SPOTIFY_TRACK.test(query)) {
-                // Convert Spotify track to SoundCloud search to bypass region/auth blocks
+                // Convert Spotify track to YouTube search
                 try {
                     const { getData } = require('spotify-url-info')(fetch);
                     const data = await getData(query);
                     const trackName = data?.title || data?.name || '';
                     const artist = data?.subtitle || data?.artists?.[0]?.name || '';
-                    resolveQuery = `scsearch:${trackName} ${artist}`;
+                    resolveQuery = `ytsearch:${trackName} ${artist} audio`;
                 } catch {
                     // Fallback: send raw if scraping fails
                     resolveQuery = query;
@@ -198,7 +198,7 @@ module.exports = {
             } else if (URL_REGEX.test(query)) {
                 resolveQuery = query;
             } else {
-                resolveQuery = `scsearch:${query}`;
+                resolveQuery = `ytsearch:${query}`;
             }
 
             const result = await client.manager.resolve(resolveQuery, interaction.user);
