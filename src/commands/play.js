@@ -69,7 +69,7 @@ module.exports = {
 
                 // Resolve tracks in background — non-blocking so the bot stays responsive
                 (async () => {
-                    const BATCH = 5;
+                    const BATCH = 1;
                     for (let i = 0; i < tracks.length; i += BATCH) {
                         const batch = tracks.slice(i, i + BATCH);
                         const results = await Promise.allSettled(
@@ -82,7 +82,7 @@ module.exports = {
                             }
                         }
                         // ── CRITICAL: Delay between batches to prevent Lavalink CPU overload and 5000ms ping spikes ──
-                        await new Promise(r => setTimeout(r, 1500));
+                        await new Promise(r => setTimeout(r, 2000));
                     }
                 })();
 
@@ -109,7 +109,7 @@ module.exports = {
                 await interaction.editReply({ embeds: [successEmbed(`💿 Loading **${tracks.length}** tracks from **${name}**...`)] });
 
                 (async () => {
-                    const BATCH = 5;
+                    const BATCH = 1;
                     for (let i = 0; i < tracks.length; i += BATCH) {
                         const batch = tracks.slice(i, i + BATCH);
                         const results = await Promise.allSettled(
@@ -122,7 +122,7 @@ module.exports = {
                             }
                         }
                         // ── CRITICAL: Delay between batches to prevent Lavalink CPU overload and 5000ms ping spikes ──
-                        await new Promise(r => setTimeout(r, 1500));
+                        await new Promise(r => setTimeout(r, 2000));
                     }
                 })();
 
@@ -149,7 +149,7 @@ module.exports = {
                 await interaction.editReply({ embeds: [successEmbed(`🎤 Loading **${tracks.length}** top tracks from **${name}**...`)] });
 
                 (async () => {
-                    const BATCH = 5;
+                    const BATCH = 1;
                     for (let i = 0; i < tracks.length; i += BATCH) {
                         const batch = tracks.slice(i, i + BATCH);
                         const results = await Promise.allSettled(
@@ -162,7 +162,7 @@ module.exports = {
                             }
                         }
                         // ── CRITICAL: Delay between batches to prevent Lavalink CPU overload and 5000ms ping spikes ──
-                        await new Promise(r => setTimeout(r, 1500));
+                        await new Promise(r => setTimeout(r, 2000));
                     }
                 })();
 
