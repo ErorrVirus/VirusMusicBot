@@ -167,16 +167,28 @@ module.exports = {
             return;
         }
 
+        // ── UNSUPPORTED SPOTIFY LINKS (Liked Songs, etc.) ─────────────────────
+        if (query.includes('spotify.com/collection') || query.includes('spotify.com/user')) {
+            return interaction.editReply({ embeds: [errorEmbed('"Liked Songs" and private user collections cannot be loaded because Spotify does not allow external apps to read them. Please share a **public playlist** instead!')] });
+        }
+
         // ── SINGLE SPOTIFY TRACK / YOUTUBE / SEARCH ───────────────────────────
         try {
             const player = await getPlayer();
 
-            // Single Spotify track → let LavaSrc resolve it (works fine)
-            // YouTube URLs → send raw
-            // Plain text → ytsearch prefix
             let resolveQuery;
             if (SPOTIFY_TRACK.test(query)) {
-                resolveQuery = query;
+                // Convert Spotify track to YouTube search to bypass region/auth blocks
+                try {
+                    const { getData } = require('spotify-url-info')(fetch);
+                    const data = await getData(query);
+                    const trackName = data?.title || data?.name || '';
+                    const artist = data?.subtitle || data?.artists?.[0]?.name || '';
+                    resolveQuery = `ytsearch:${trackName} ${artist} audio`;
+                } catch {
+                    // Fallback: send raw if scraping fails
+                    resolveQuery = query;
+                }
             } else if (URL_REGEX.test(query)) {
                 resolveQuery = query;
             } else {

@@ -40,8 +40,8 @@ class MusicManager extends EventEmitter {
             const { formatTime } = require('../utils/helpers');
             const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType } = require('discord.js');
             
-            // Set Bot Activity
-            this.client.user.setActivity(track.info.title, { type: ActivityType.Playing });
+            // Set Bot Activity — generic to protect server privacy
+            this.client.user.setActivity('music 🎵', { type: ActivityType.Listening });
             
             const embed = buildEmbed({
                 author: { 

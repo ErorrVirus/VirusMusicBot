@@ -22,13 +22,13 @@ module.exports = {
                             player.isPaused = !player.isPaused;
                             await player.player.setPaused(player.isPaused);
                             
-                            // Update activity
-                            if (player.current && player.current.info) {
+                            // Update activity — generic to protect server privacy
+                            {
                                 const { ActivityType } = require('discord.js');
                                 if (player.isPaused) {
-                                    client.user.setActivity(`paused: ${player.current.info.title}`, { type: ActivityType.Playing });
+                                    client.user.setActivity('music (paused) ⏸️', { type: ActivityType.Listening });
                                 } else {
-                                    client.user.setActivity(player.current.info.title, { type: ActivityType.Playing });
+                                    client.user.setActivity('music 🎵', { type: ActivityType.Listening });
                                 }
                             }
 
