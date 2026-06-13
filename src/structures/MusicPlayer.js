@@ -123,12 +123,20 @@ class MusicPlayer {
 
     destroy(reason = 'Unknown') {
         console.log(`[MusicPlayer] Destroying player for guild ${this.guildId}. Reason: ${reason}`);
-        console.trace('Destroy trace');
         if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
         this.queue = [];
         this.previous = [];
         this.current = null;
-        if (this.player) this.manager.shoukaku.leaveVoiceChannel(this.guildId);
+        
+        if (this.player) {
+            try {
+                this.player.setPaused(true);
+                this.player.stopTrack();
+                this.player.removeAllListeners();
+            } catch (err) {}
+            this.manager.shoukaku.leaveVoiceChannel(this.guildId);
+        }
+        
         this.manager.players.delete(this.guildId);
     }
 }

@@ -101,8 +101,14 @@ class MusicManager extends EventEmitter {
 
         this.on('playerClosed', (player, data) => {
             console.log(`Player closed in guild ${player.guildId}`, data);
-            // Ignore normal disconnects
-            if (data.code === 4014) return;
+            if (data.code === 4014) {
+                const guild = this.client.guilds.cache.get(player.guildId);
+                if (guild && !guild.members.me.voice.channelId) {
+                    console.log(`[MusicManager] 4014 received and bot is not in a voice channel. Destroying player...`);
+                    player.destroy('Disconnected (4014) and no channel ID');
+                }
+                return;
+            }
         });
 
         this.on('playerException', (player, data) => {
@@ -111,6 +117,17 @@ class MusicManager extends EventEmitter {
 
         this.on('playerStuck', (player, data) => {
             console.warn(`Track stuck in guild ${player.guildId}:`, data);
+        });
+
+        // Direct voiceStateUpdate listener to guarantee we catch the disconnect
+        this.client.on('voiceStateUpdate', (oldState, newState) => {
+            if (oldState.id === this.client.user.id && oldState.channelId && !newState.channelId) {
+                const p = this.getPlayer(oldState.guild.id);
+                if (p) {
+                    console.log(`[MusicManager-VSU] Bot disconnected from voice in ${oldState.guild.id}. Destroying player...`);
+                    p.destroy('Manual disconnect');
+                }
+            }
         });
     }
 
