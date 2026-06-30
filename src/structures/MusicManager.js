@@ -53,13 +53,11 @@ class MusicManager extends EventEmitter {
 
             // The embed contains the volume ▬🔘▬ slider bar directly inside a field
             const embed      = buildNowPlayingEmbed(track, player.volume || 100, this.client.user.displayAvatarURL());
-            // Row 1 — ⏮ Previous | ⏸/▶ Pause | ⏹ Stop | ⏭ Skip
+            // Row 1 — ⏮ Previous | ⏸/▶ Pause | ⏭ Skip | 🔉 Vol Down | 🔊 Vol Up (5 buttons)
             const controlRow = buildControlRow(player.isPaused, player.previous.length > 0);
-            // Row 2 — volume dropdown (20 presets, 10 %–200 %)
-            const volumeMenu = buildVolumeMenu(player.volume || 100);
 
             // Store the message so volume changes can live-edit it
-            channel.send({ embeds: [embed], components: [controlRow, volumeMenu] })
+            channel.send({ embeds: [embed], components: [controlRow] })
                 .then(msg => { player.nowPlayingMessage = msg; })
                 .catch(() => {});
         });

@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { errorEmbed, buildNowPlayingEmbed, buildControlRow, buildVolumeMenu } = require('../utils/embedBuilder');
+const { errorEmbed, buildNowPlayingEmbed, buildControlRow } = require('../utils/embedBuilder');
 const { buildVolumeBar } = require('../utils/helpers');
 
 // Helper: rebuilds and edits the Now Playing message after any state change
@@ -9,8 +9,7 @@ async function refreshNowPlaying(player, client) {
         await player.nowPlayingMessage.edit({
             embeds:     [buildNowPlayingEmbed(player.current, player.volume, client.user.displayAvatarURL())],
             components: [
-                buildControlRow(player.isPaused, player.previous.length > 0),
-                buildVolumeMenu(player.volume)
+                buildControlRow(player.isPaused, player.previous.length > 0)
             ]
         });
     } catch (_) {
@@ -21,46 +20,6 @@ async function refreshNowPlaying(player, client) {
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction, client) {
-
-        // ── Volume select-menu ────────────────────────────────────────────────
-        if (interaction.isStringSelectMenu()) {
-            if (interaction.customId !== 'music_volume_select') return;
-
-            const player = client.manager.getPlayer(interaction.guild.id);
-            if (!player || !player.current) {
-                return interaction.reply({ content: '❌ No music is currently playing!', ephemeral: true });
-            }
-            if (!interaction.member.voice.channelId ||
-                interaction.member.voice.channelId !== interaction.guild.members.me.voice.channelId) {
-                return interaction.reply({ content: '❌ You must be in the same voice channel as me!', ephemeral: true });
-            }
-
-            const volume = Math.max(1, Math.min(200, parseInt(interaction.values[0], 10)));
-            player.volume = volume;
-            await player.player.setGlobalVolume(volume);
-
-            // Live-edit the Now Playing message — slider knob moves inside the embed
-            await refreshNowPlaying(player, client);
-
-            // Ephemeral colour-coded confirmation
-            const { bar, color, label, icon } = buildVolumeBar(volume);
-            return interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor(color)
-                        .setAuthor({ name: '🎚️  Volume Updated' })
-                        .setDescription(
-                            `\`\`\`\n${icon}  ${bar}  ${volume}%\n\`\`\`` +
-                            `**${label}**`
-                        )
-                        .setFooter({
-                            text:    `Adjusted by ${interaction.user.username}`,
-                            iconURL: interaction.user.displayAvatarURL()
-                        })
-                ],
-                ephemeral: true
-            });
-        }
 
         // ── Button interactions ───────────────────────────────────────────────
         if (interaction.isButton()) {
@@ -113,6 +72,63 @@ module.exports = {
                     case 'music_skip': {
                         player.player.stopTrack(); // triggers 'end' → playNext()
                         return interaction.reply({ content: '⏭️  Skipped the track!', ephemeral: true });
+                    }
+
+                    // ── Volume button adjustments ──────────────────────────────
+                    case 'music_voldown': {
+                        // Decrease volume by 10%
+                        player.volume = Math.max(1, player.volume - 10);
+                        await player.player.setGlobalVolume(player.volume);
+
+                        // Live-edit the Now Playing message — slider knob moves inside the embed
+                        await refreshNowPlaying(player, client);
+
+                        // Ephemeral confirmation
+                        const { bar, color, label, icon } = buildVolumeBar(player.volume);
+                        return interaction.reply({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setColor(color)
+                                    .setAuthor({ name: 'Volume Updated' })
+                                    .setDescription(
+                                        `\`\`\`\n${icon}  ${bar}  ${player.volume}%\n\`\`\`` +
+                                        `**${label}**`
+                                    )
+                                    .setFooter({
+                                        text:    `Decreased by ${interaction.user.username}`,
+                                        iconURL: interaction.user.displayAvatarURL()
+                                    })
+                            ],
+                            ephemeral: true
+                        });
+                    }
+
+                    case 'music_volup': {
+                        // Increase volume by 10%
+                        player.volume = Math.min(200, player.volume + 10);
+                        await player.player.setGlobalVolume(player.volume);
+
+                        // Live-edit the Now Playing message — slider knob moves inside the embed
+                        await refreshNowPlaying(player, client);
+
+                        // Ephemeral confirmation
+                        const { bar, color, label, icon } = buildVolumeBar(player.volume);
+                        return interaction.reply({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setColor(color)
+                                    .setAuthor({ name: 'Volume Updated' })
+                                    .setDescription(
+                                        `\`\`\`\n${icon}  ${bar}  ${player.volume}%\n\`\`\`` +
+                                        `**${label}**`
+                                    )
+                                    .setFooter({
+                                        text:    `Increased by ${interaction.user.username}`,
+                                        iconURL: interaction.user.displayAvatarURL()
+                                    })
+                            ],
+                            ephemeral: true
+                        });
                     }
                 }
             } catch (err) {
