@@ -55,10 +55,10 @@ module.exports = {
                 { name: '👤  Author',       value: `\`${track.info.author}\``,                                           inline: true },
                 { name: '⏱  Duration',     value: `\`${track.info.isStream ? '🔴 LIVE' : formatTime(track.info.length)}\``, inline: true },
                 { name: '🎧  Requested By', value: `<@${track.requester?.id || 'unknown'}>`,                             inline: true },
-                // Volume slider — lives inside the card
+                // Volume slider — formatted exactly like: 🔊 ▰▰▰▰▰▱▱▱ 50%
                 {
-                    name:   `${icon}  Volume  ·  ${volume}%  —  ${label}`,
-                    value:  slider,
+                    name:   `Volume  ·  ${label}`,
+                    value:  `${icon}  ${slider}  ${volume}%`,
                     inline: false
                 }
             )

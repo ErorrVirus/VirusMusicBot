@@ -19,18 +19,17 @@ module.exports = {
     },
 
     /**
-     * Renders a ▬▬▬🔘▬▬▬ slider track with the knob at the correct position.
-     * Mimics a real media-player volume slider inside a Discord embed field.
+     * Renders a ▰▰▰▱▱ slider track.
      * @param {number} volume  Current volume (1–200)
      * @param {number} max     Maximum volume (default 200)
      * @returns {string}
      */
     buildSliderBar: (volume, max = 200) => {
-        const STEPS  = 17;
+        const STEPS  = 10; // 10 steps is clean and aligns perfectly
         const pos    = Math.round((volume / max) * STEPS);
-        const before = '▬'.repeat(Math.max(0, pos));
-        const after  = '▬'.repeat(Math.max(0, STEPS - pos));
-        return `${before}🔘${after}`;
+        const before = '▰'.repeat(Math.max(0, pos));
+        const after  = '▱'.repeat(Math.max(0, STEPS - pos));
+        return `${before}${after}`;
     },
 
     /**
