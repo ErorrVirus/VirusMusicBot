@@ -44,42 +44,26 @@ class MusicManager extends EventEmitter {
 
             const channel = this.client.channels.cache.get(player.textId);
             if (!channel) return;
-            const { buildEmbed, buildControlRow, buildVolumeRow } = require('../utils/embedBuilder');
-            const { formatTime } = require('../utils/helpers');
+
+            const { buildNowPlayingEmbed, buildControlRow, buildVolumeMenu } = require('../utils/embedBuilder');
             const { ActivityType } = require('discord.js');
-            
+
             // Set Bot Activity — generic to protect server privacy
             this.client.user.setActivity('music 🎵', { type: ActivityType.Listening });
-            
-            const embed = buildEmbed({
-                author: { 
-                    name: 'Now Playing', 
-                    iconURL: 'https://cdn.discordapp.com/emojis/1105021295240560700.gif'
-                },
-                title: track.info.title,
-                url: track.info.uri,
-                thumbnail: track.info.artworkUrl || 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?q=80&w=200&auto=format&fit=crop',
-                fields: [
-                    { name: '👤 Author', value: `\`${track.info.author}\``, inline: true },
-                    { name: '⏱️ Duration', value: `\`${track.info.isStream ? 'LIVE' : formatTime(track.info.length)}\``, inline: true },
-                    { name: '🎧 Requested By', value: `<@${track.requester?.id || this.client.user.id}>`, inline: true }
-                ],
-                footer: {
-                    text: 'Coded by ErorrVirus',
-                    iconURL: this.client.user.displayAvatarURL()
-                }
-            });
 
-            // Row 1 — playback controls (pause / stop / skip)
-            const controlRow = buildControlRow(player.isPaused);
-            // Row 2 — interactive volume slider
-            const volumeRow = buildVolumeRow(player.volume || 100);
+            // The embed contains the volume ▬🔘▬ slider bar directly inside a field
+            const embed      = buildNowPlayingEmbed(track, player.volume || 100, this.client.user.displayAvatarURL());
+            // Row 1 — ⏮ Previous | ⏸/▶ Pause | ⏹ Stop | ⏭ Skip
+            const controlRow = buildControlRow(player.isPaused, player.previous.length > 0);
+            // Row 2 — volume dropdown (20 presets, 10 %–200 %)
+            const volumeMenu = buildVolumeMenu(player.volume || 100);
 
-            // Store the message so volume-button handlers can live-edit the bar
-            channel.send({ embeds: [embed], components: [controlRow, volumeRow] })
+            // Store the message so volume changes can live-edit it
+            channel.send({ embeds: [embed], components: [controlRow, volumeMenu] })
                 .then(msg => { player.nowPlayingMessage = msg; })
                 .catch(() => {});
         });
+
 
         this.on('playerEmpty', (player) => {
             // Restore Bot Activity
