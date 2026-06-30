@@ -6,21 +6,21 @@ services:
     container_name: virusmusicbot_bot
     restart: unless-stopped
     working_dir: /app
+    # Wait until lavalink passes its healthcheck before starting
     depends_on:
-      - lavalink
+      lavalink:
+        condition: service_healthy
     networks:
       - virusmusicbot_net
     dns:
       - 8.8.8.8
       - 1.1.1.1
     command: >
-      sh -c "apk add --no-cache git curl &&
+      sh -c "apk add --no-cache git &&
       rm -rf /app/* /app/.[!.]* &&
       git clone https://github.com/ErorrVirus/VirusMusicBot.git . &&
       npm install --omit=dev &&
-      echo 'Waiting for Lavalink...' &&
-      until curl -s http://virusmusicbot_lavalink:2333/ >/dev/null; do sleep 5; done &&
-      echo 'Lavalink ready! Starting bot...' &&
+      echo 'Lavalink is healthy — starting bot...' &&
       node src/index.js"
     ports:
       - "4000:4000"
@@ -50,6 +50,14 @@ services:
       - 1.1.1.1
     volumes:
       - lavalink_plugins:/opt/Lavalink/plugins
+    # Healthcheck: Lavalink responds with 401 (wrong auth) or 200 (correct auth)
+    # either way means the HTTP server is fully up and ready.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2333/version -S 2>&1 | grep -q 'HTTP/' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     environment:
       # G1GC: low-pause concurrent GC. MaxGCPauseMillis=20 bounds stop-the-world
       # pauses to ~20ms, preventing audio glitches caused by JVM GC pauses.
