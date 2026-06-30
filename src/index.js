@@ -9,14 +9,16 @@ config.validate();
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
     ]
 });
 
 client.once('ready', () => {
     console.log(`✅ [Bot] Logged in as ${client.user.tag}`);
     client.user.setActivity('ready to play any song', { type: ActivityType.Playing });
-    
+
     // Start Developer Dashboard
     try {
         require('./web/server')(client);
