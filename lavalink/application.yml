@@ -60,7 +60,10 @@ lavalink:
       rotation: true
       channelMix: true
       lowPass: true
-    nonAllocating: false
+    # nonAllocating uses stack-allocated audio frames instead of heap-allocated
+    # ones. This dramatically reduces GC pressure, eliminating the random
+    # mid-playback stutters caused by JVM GC pauses on lower-end hardware.
+    nonAllocating: true
 
 metrics:
   prometheus:

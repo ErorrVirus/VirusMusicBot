@@ -51,7 +51,10 @@ services:
     volumes:
       - lavalink_plugins:/opt/Lavalink/plugins
     environment:
-      - _JAVA_OPTIONS=-Xmx1G -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US
+      # G1GC: low-pause concurrent GC. MaxGCPauseMillis=20 bounds stop-the-world
+      # pauses to ~20ms, preventing audio glitches caused by JVM GC pauses.
+      # G1HeapRegionSize=4m is optimal for 1GB heap on a 4-core i5-4590.
+      - _JAVA_OPTIONS=-Xmx1G -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:G1HeapRegionSize=4m -XX:+ParallelRefProcEnabled -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US
       # Server
       - SERVER_PORT=2333
       - SERVER_ADDRESS=0.0.0.0

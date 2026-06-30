@@ -80,7 +80,14 @@ class MusicPlayer {
 
         try {
             await this.player.playTrack({ track: { encoded: this.current.encoded } });
-            await this.player.setGlobalVolume(this.volume);
+            // Only restore volume if it's not the default (100).
+            // We intentionally do NOT call setGlobalVolume here on every track start
+            // because that triggers a Lavalink filter update during audio buffer
+            // initialization, causing a race condition that manifests as startup stutter.
+            // Lavalink remembers the player's volume across tracks on the same session.
+            if (this.volume !== 100) {
+                await this.player.setGlobalVolume(this.volume);
+            }
         } catch (error) {
             console.error('Failed to play track', error);
             this.playNext();

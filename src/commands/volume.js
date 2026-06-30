@@ -20,9 +20,13 @@ module.exports = {
             return interaction.reply({ embeds: [errorEmbed('You must be in my voice channel to use this command.')], ephemeral: true });
         }
 
-        const volume = interaction.options.getInteger('amount');
+        const volume = Math.max(1, Math.min(200, interaction.options.getInteger('amount')));
         player.volume = volume;
-        player.player.setGlobalVolume(volume);
+
+        // Use setGlobalVolume (Lavalink v4 /volume endpoint) rather than the
+        // filters DSP chain. This avoids audio pipeline stalls when changing
+        // volume during active playback, especially at low levels (≤50%).
+        await player.player.setGlobalVolume(volume);
         
         interaction.reply({ embeds: [successEmbed(`Volume set to **${volume}%**.`)] });
     }

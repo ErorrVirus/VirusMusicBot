@@ -43,12 +43,14 @@ module.exports = {
                             return interaction.reply({ content: '⏹️ Stopped the music and cleared the queue.', ephemeral: true });
                         
                         case 'music_voldown':
-                            player.volume = Math.max(0, player.volume - 10);
+                            // Clamp to minimum 1 — volume of 0 can cause Lavalink
+                            // DSP gain filter issues resulting in audio stutter.
+                            player.volume = Math.max(1, player.volume - 10);
                             await player.player.setGlobalVolume(player.volume);
                             return interaction.reply({ content: `🔉 Volume decreased to **${player.volume}%**`, ephemeral: true });
                         
                         case 'music_volup':
-                            player.volume = Math.min(100, player.volume + 10);
+                            player.volume = Math.min(200, player.volume + 10);
                             await player.player.setGlobalVolume(player.volume);
                             return interaction.reply({ content: `🔊 Volume increased to **${player.volume}%**`, ephemeral: true });
                     }
