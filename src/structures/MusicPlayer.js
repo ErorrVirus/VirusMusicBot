@@ -22,6 +22,9 @@ class MusicPlayer {
         this.volume = 100;
         this.isPaused = false;
         
+        // Reference to the Now Playing message so we can live-edit the volume bar
+        this.nowPlayingMessage = null;
+        
         this.connectionTimeout = null;
     }
 

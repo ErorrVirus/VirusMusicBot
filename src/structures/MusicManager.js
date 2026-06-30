@@ -2,6 +2,8 @@ const { EventEmitter } = require('events');
 const { Shoukaku, Connectors } = require('shoukaku');
 const MusicPlayer = require('./MusicPlayer');
 const config = require('../config');
+// Row builders are imported lazily inside the playerStart handler to avoid
+// circular-dependency issues at module load time.
 
 class MusicManager extends EventEmitter {
     constructor(client) {
@@ -42,9 +44,9 @@ class MusicManager extends EventEmitter {
 
             const channel = this.client.channels.cache.get(player.textId);
             if (!channel) return;
-            const { buildEmbed } = require('../utils/embedBuilder');
+            const { buildEmbed, buildControlRow, buildVolumeRow } = require('../utils/embedBuilder');
             const { formatTime } = require('../utils/helpers');
-            const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ActivityType } = require('discord.js');
+            const { ActivityType } = require('discord.js');
             
             // Set Bot Activity — generic to protect server privacy
             this.client.user.setActivity('music 🎵', { type: ActivityType.Listening });
@@ -52,7 +54,7 @@ class MusicManager extends EventEmitter {
             const embed = buildEmbed({
                 author: { 
                     name: 'Now Playing', 
-                    iconURL: 'https://cdn.discordapp.com/emojis/1105021295240560700.gif' // Or whatever icon
+                    iconURL: 'https://cdn.discordapp.com/emojis/1105021295240560700.gif'
                 },
                 title: track.info.title,
                 url: track.info.uri,
@@ -68,16 +70,15 @@ class MusicManager extends EventEmitter {
                 }
             });
 
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId('music_pause').setEmoji('⏯️').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('music_stop').setEmoji('⏹️').setStyle(ButtonStyle.Danger),
-                new ButtonBuilder().setCustomId('music_skip').setEmoji('⏭️').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('music_voldown').setEmoji('🔉').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('music_volup').setEmoji('🔊').setStyle(ButtonStyle.Secondary)
-            );
+            // Row 1 — playback controls (pause / stop / skip)
+            const controlRow = buildControlRow(player.isPaused);
+            // Row 2 — interactive volume slider
+            const volumeRow = buildVolumeRow(player.volume || 100);
 
-            // Store message so we can delete/edit it later if needed, but not strictly required
-            channel.send({ embeds: [embed], components: [row] }).catch(() => {});
+            // Store the message so volume-button handlers can live-edit the bar
+            channel.send({ embeds: [embed], components: [controlRow, volumeRow] })
+                .then(msg => { player.nowPlayingMessage = msg; })
+                .catch(() => {});
         });
 
         this.on('playerEmpty', (player) => {

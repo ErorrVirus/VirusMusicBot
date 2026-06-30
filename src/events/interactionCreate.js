@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { errorEmbed } = require('../utils/embedBuilder');
+const { errorEmbed, buildControlRow, buildVolumeRow } = require('../utils/embedBuilder');
 const { buildVolumeBar } = require('../utils/helpers');
 
 module.exports = {
@@ -20,11 +20,22 @@ module.exports = {
 
                 try {
                     switch (interaction.customId) {
+
+                        // ── Playback controls ──────────────────────────────────────────
                         case 'music_pause':
                             player.isPaused = !player.isPaused;
                             await player.player.setPaused(player.isPaused);
-                            
-                            // Update activity — generic to protect server privacy
+
+                            // Refresh the control row so the icon flips between ⏸ and ▶
+                            if (player.nowPlayingMessage) {
+                                player.nowPlayingMessage.edit({
+                                    components: [
+                                        buildControlRow(player.isPaused),
+                                        buildVolumeRow(player.volume)
+                                    ]
+                                }).catch(() => {});
+                            }
+
                             {
                                 const { ActivityType } = require('discord.js');
                                 if (player.isPaused) {
@@ -34,41 +45,65 @@ module.exports = {
                                 }
                             }
 
-                            return interaction.reply({ content: player.isPaused ? '⏸️ Paused the music.' : '▶️ Resumed the music.', ephemeral: true });
-                        
+                            return interaction.reply({
+                                content: player.isPaused ? '⏸️ Paused the music.' : '▶️ Resumed the music.',
+                                ephemeral: true
+                            });
+
                         case 'music_skip':
-                            player.player.stopTrack(); // triggers 'end' event which calls playNext() automatically
+                            player.player.stopTrack(); // triggers 'end' → playNext()
                             return interaction.reply({ content: '⏭️ Skipped the track!', ephemeral: true });
 
                         case 'music_stop':
                             player.destroy('Stop button pressed');
                             return interaction.reply({ content: '⏹️ Stopped the music and cleared the queue.', ephemeral: true });
-                        
-                        case 'music_voldown': {
-                            // Clamp to minimum 1 — volume of 0 can cause Lavalink
-                            // DSP gain filter issues resulting in audio stutter.
-                            player.volume = Math.max(1, player.volume - 10);
+
+                        // ── Volume slider ──────────────────────────────────────────────
+                        // Layout: [◄◄ -20]  [◄ -10]  [🔉 ████████░░░░ 75%]  [+10 ►]  [+20 ►►]
+                        //
+                        // Pressing a left or right button:
+                        //   1. Changes the volume in Lavalink
+                        //   2. Live-edits the Now Playing message to update the bar display
+                        //   3. Replies ephemerally with a colour-coded volume embed
+                        case 'music_vol_m20':
+                        case 'music_vol_m10':
+                        case 'music_vol_p10':
+                        case 'music_vol_p20': {
+                            const deltas = {
+                                music_vol_m20: -20,
+                                music_vol_m10: -10,
+                                music_vol_p10:  10,
+                                music_vol_p20:  20
+                            };
+                            player.volume = Math.max(1, Math.min(200, player.volume + deltas[interaction.customId]));
                             await player.player.setGlobalVolume(player.volume);
-                            const vd = buildVolumeBar(player.volume);
+
+                            // Live-edit the Now Playing message so the bar reflects the new volume
+                            if (player.nowPlayingMessage) {
+                                player.nowPlayingMessage.edit({
+                                    components: [
+                                        buildControlRow(player.isPaused),
+                                        buildVolumeRow(player.volume)
+                                    ]
+                                }).catch(() => {});
+                            }
+
+                            // Ephemeral confirmation embed with colour-coded bar
+                            const { bar, color, label, icon } = buildVolumeBar(player.volume);
                             return interaction.reply({
-                                embeds: [new EmbedBuilder()
-                                    .setColor(vd.color)
-                                    .setAuthor({ name: '🎚️  Volume Control' })
-                                    .setDescription(`\`\`\`\n${vd.bar}  ${player.volume}%\n\`\`\`` + `**Level:** ${vd.label}`)
-                                    .setFooter({ text: `Adjusted by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })],
-                                ephemeral: true
-                            });
-                        }
-                        case 'music_volup': {
-                            player.volume = Math.min(200, player.volume + 10);
-                            await player.player.setGlobalVolume(player.volume);
-                            const vu = buildVolumeBar(player.volume);
-                            return interaction.reply({
-                                embeds: [new EmbedBuilder()
-                                    .setColor(vu.color)
-                                    .setAuthor({ name: '🎚️  Volume Control' })
-                                    .setDescription(`\`\`\`\n${vu.bar}  ${player.volume}%\n\`\`\`` + `**Level:** ${vu.label}`)
-                                    .setFooter({ text: `Adjusted by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })],
+                                embeds: [
+                                    new EmbedBuilder()
+                                        .setColor(color)
+                                        .setAuthor({ name: '🎚️  Volume' })
+                                        .setDescription(
+                                            `\`\`\`\n${icon}  ${bar}  ${player.volume}%\n\`\`\`` +
+                                            `**${label}**`
+                                        )
+                                        .setFooter({
+                                            text: `Adjusted by ${interaction.user.username}`,
+                                            iconURL: interaction.user.displayAvatarURL()
+                                        })
+                                ],
                                 ephemeral: true
                             });
                         }
