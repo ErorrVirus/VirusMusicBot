@@ -52,12 +52,12 @@ class MusicManager extends EventEmitter {
             this.client.user.setActivity('music 🎵', { type: ActivityType.Listening });
 
             // The embed contains the volume ▰▰▰▱▱ slider bar directly inside a field
-            const embed       = buildNowPlayingEmbed(track, player.volume || 100, this.client.user.displayAvatarURL());
-            // buildControlRow returns [row1, row2] (two ActionRows)
-            const controlRows = buildControlRow(player.isPaused, player.previous.length > 0);
+            const embed      = buildNowPlayingEmbed(track, player.volume || 100, this.client.user.displayAvatarURL());
+            // Single row: ⏸/▶ | ⏹ | ⏭ | 🔉 | 🔊
+            const controlRow = buildControlRow(player.isPaused);
 
             // Store the message so volume changes can live-edit it
-            channel.send({ embeds: [embed], components: controlRows })
+            channel.send({ embeds: [embed], components: [controlRow] })
                 .then(msg => { player.nowPlayingMessage = msg; })
                 .catch(() => {});
         });

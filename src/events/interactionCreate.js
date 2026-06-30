@@ -8,7 +8,7 @@ async function refreshNowPlaying(player, client) {
     try {
         await player.nowPlayingMessage.edit({
             embeds:     [buildNowPlayingEmbed(player.current, player.volume, client.user.displayAvatarURL())],
-            components: buildControlRow(player.isPaused, player.previous.length > 0)
+            components: [buildControlRow(player.isPaused)]
         });
     } catch (_) {
         // Message may have been deleted — silently ignore
