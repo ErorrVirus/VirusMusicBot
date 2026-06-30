@@ -19,7 +19,7 @@ services:
       git clone https://github.com/ErorrVirus/VirusMusicBot.git . &&
       npm install --omit=dev &&
       echo 'Waiting for Lavalink...' &&
-      until curl -sf -H 'Authorization: ${LAVALINK_PASSWORD:-youshallnotpass}' http://virusmusicbot_lavalink:2333/version; do sleep 5; done &&
+      until curl -s http://virusmusicbot_lavalink:2333/ >/dev/null; do sleep 5; done &&
       echo 'Lavalink ready! Starting bot...' &&
       node src/index.js"
     ports:
