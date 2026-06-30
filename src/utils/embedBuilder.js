@@ -65,16 +65,18 @@ module.exports = {
             .setFooter({ text: '✦  Coded by ErorrVirus', iconURL: clientAvatarURL });
     },
 
-    // ── Playback control row ─────────────────────────────────────────────────
+    // ── Playback control rows ────────────────────────────────────────────────
     /**
-     * Row 1 — 5 modern media-player buttons in a single row.
-     * ⏮  Previous  |  ⏸/▶  Pause/Resume  |  ⏭  Skip  |  🔉 Vol Down  |  🔊 Vol Up
+     * Builds playback controls in two clean rows to fit the Stop button.
+     * Row 1: ⏮ Previous | ⏸/▶ Pause | ⏹ Stop | ⏭ Skip
+     * Row 2: 🔉 Vol Down | 🔊 Vol Up
      *
      * @param {boolean} isPaused
-     * @param {boolean} hasPrevious  Whether there are tracks in the history
+     * @param {boolean} hasPrevious
+     * @returns {ActionRowBuilder[]}
      */
     buildControlRow: (isPaused = false, hasPrevious = false) => {
-        return new ActionRowBuilder().addComponents(
+        const row1 = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('music_previous')
                 .setEmoji('⏮')
@@ -85,9 +87,16 @@ module.exports = {
                 .setEmoji(isPaused ? '▶️' : '⏸️')
                 .setStyle(isPaused ? ButtonStyle.Success : ButtonStyle.Primary),
             new ButtonBuilder()
+                .setCustomId('music_stop')
+                .setEmoji('⏹️')
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
                 .setCustomId('music_skip')
                 .setEmoji('⏭')
-                .setStyle(ButtonStyle.Secondary),
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+        const row2 = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('music_voldown')
                 .setEmoji('🔉')
@@ -97,5 +106,7 @@ module.exports = {
                 .setEmoji('🔊')
                 .setStyle(ButtonStyle.Secondary)
         );
+
+        return [row1, row2];
     }
 };
