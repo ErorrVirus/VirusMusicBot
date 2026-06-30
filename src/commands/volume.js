@@ -1,5 +1,6 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { errorEmbed } = require('../utils/embedBuilder');
+const { buildVolumeBar } = require('../utils/helpers');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -27,7 +28,19 @@ module.exports = {
         // filters DSP chain. This avoids audio pipeline stalls when changing
         // volume during active playback, especially at low levels (≤50%).
         await player.player.setGlobalVolume(volume);
-        
-        interaction.reply({ embeds: [successEmbed(`Volume set to **${volume}%**.`)] });
+
+        const { bar, color, label } = buildVolumeBar(volume);
+
+        const embed = new EmbedBuilder()
+            .setColor(color)
+            .setAuthor({ name: '🎚️  Volume Control' })
+            .setDescription(
+                `\`\`\`\n${bar}  ${volume}%\n\`\`\`` +
+                `**Level:** ${label}`
+            )
+            .setFooter({ text: `Adjusted by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+        interaction.reply({ embeds: [embed] });
     }
 };
+

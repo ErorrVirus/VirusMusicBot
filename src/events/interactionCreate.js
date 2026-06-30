@@ -1,4 +1,6 @@
+const { EmbedBuilder } = require('discord.js');
 const { errorEmbed } = require('../utils/embedBuilder');
+const { buildVolumeBar } = require('../utils/helpers');
 
 module.exports = {
     name: 'interactionCreate',
@@ -42,17 +44,34 @@ module.exports = {
                             player.destroy('Stop button pressed');
                             return interaction.reply({ content: '⏹️ Stopped the music and cleared the queue.', ephemeral: true });
                         
-                        case 'music_voldown':
+                        case 'music_voldown': {
                             // Clamp to minimum 1 — volume of 0 can cause Lavalink
                             // DSP gain filter issues resulting in audio stutter.
                             player.volume = Math.max(1, player.volume - 10);
                             await player.player.setGlobalVolume(player.volume);
-                            return interaction.reply({ content: `🔉 Volume decreased to **${player.volume}%**`, ephemeral: true });
-                        
-                        case 'music_volup':
+                            const vd = buildVolumeBar(player.volume);
+                            return interaction.reply({
+                                embeds: [new EmbedBuilder()
+                                    .setColor(vd.color)
+                                    .setAuthor({ name: '🎚️  Volume Control' })
+                                    .setDescription(`\`\`\`\n${vd.bar}  ${player.volume}%\n\`\`\`` + `**Level:** ${vd.label}`)
+                                    .setFooter({ text: `Adjusted by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })],
+                                ephemeral: true
+                            });
+                        }
+                        case 'music_volup': {
                             player.volume = Math.min(200, player.volume + 10);
                             await player.player.setGlobalVolume(player.volume);
-                            return interaction.reply({ content: `🔊 Volume increased to **${player.volume}%**`, ephemeral: true });
+                            const vu = buildVolumeBar(player.volume);
+                            return interaction.reply({
+                                embeds: [new EmbedBuilder()
+                                    .setColor(vu.color)
+                                    .setAuthor({ name: '🎚️  Volume Control' })
+                                    .setDescription(`\`\`\`\n${vu.bar}  ${player.volume}%\n\`\`\`` + `**Level:** ${vu.label}`)
+                                    .setFooter({ text: `Adjusted by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })],
+                                ephemeral: true
+                            });
+                        }
                     }
                 } catch (err) {
                     console.error('Button error:', err);
