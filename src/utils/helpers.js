@@ -65,5 +65,33 @@ module.exports = {
         else                    label = 'Maximum';
 
         return { bar, color, icon, label };
+    },
+
+    /**
+     * Common helper to validate player state and voice channel connections.
+     * Reduces command duplication (D-1).
+     *
+     * @param {object} interaction  Discord Interaction object
+     * @param {object} client       Discord Client object
+     * @param {object} options
+     * @param {boolean} options.requireCurrent  If true, checks if a track is currently playing
+     * @param {boolean} options.requireVoice    If true, verifies user is in the same voice channel as the bot
+     * @returns {{ player: object|null, error: object|null }}
+     */
+    validatePlayerConnection: (interaction, client, { requireCurrent = true, requireVoice = true } = {}) => {
+        const { errorEmbed } = require('./embedBuilder'); // lazy load to avoid circular deps
+        const player = client.manager.getPlayer(interaction.guild.id);
+        if (!player || (requireCurrent && !player.current)) {
+            return { player: null, error: { embeds: [errorEmbed('I am not playing anything.')], ephemeral: true } };
+        }
+
+        if (requireVoice) {
+            const voiceChannel = interaction.member.voice.channelId;
+            if (!voiceChannel || voiceChannel !== player.voiceId) {
+                return { player: null, error: { embeds: [errorEmbed('You must be in my voice channel to use this command.')], ephemeral: true } };
+            }
+        }
+
+        return { player, error: null };
     }
 };

@@ -1,14 +1,14 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { errorEmbed, buildEmbed } = require('../utils/embedBuilder');
-const { formatTime, createProgressBar } = require('../utils/helpers');
+const { buildEmbed } = require('../utils/embedBuilder');
+const { formatTime, createProgressBar, validatePlayerConnection } = require('../utils/helpers');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('nowplaying')
         .setDescription('View the currently playing track and its progress.'),
     async execute(interaction, client) {
-        const player = client.manager.getPlayer(interaction.guild.id);
-        if (!player || !player.current) return interaction.reply({ embeds: [errorEmbed('I am not playing anything.')], ephemeral: true });
+        const { player, error } = validatePlayerConnection(interaction, client, { requireVoice: false });
+        if (error) return interaction.reply(error);
 
         const track = player.current;
         const position = player.player.position || 0;

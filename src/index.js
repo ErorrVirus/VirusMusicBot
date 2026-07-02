@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 const MusicManager = require('./structures/MusicManager');
 
@@ -13,18 +13,6 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
-});
-
-client.once('ready', () => {
-    console.log(`✅ [Bot] Logged in as ${client.user.tag}`);
-    client.user.setActivity('ready to play any song', { type: ActivityType.Playing });
-
-    // Start Developer Dashboard
-    try {
-        require('./web/server')(client);
-    } catch (err) {
-        console.error('[Dashboard] Failed to start:', err.message);
-    }
 });
 
 // Initialize Music Manager

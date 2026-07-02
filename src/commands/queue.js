@@ -1,18 +1,30 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { errorEmbed, buildEmbed } = require('../utils/embedBuilder');
-const { formatTime } = require('../utils/helpers');
+const { buildEmbed } = require('../utils/embedBuilder');
+const { formatTime, validatePlayerConnection } = require('../utils/helpers');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('queue')
         .setDescription('View the current music queue.'),
     async execute(interaction, client) {
-        const player = client.manager.getPlayer(interaction.guild.id);
-        if (!player || !player.current) return interaction.reply({ embeds: [errorEmbed('I am not playing anything.')], ephemeral: true });
+        const { player, error } = validatePlayerConnection(interaction, client, { requireVoice: false });
+        if (error) return interaction.reply(error);
 
-        const queueStr = player.queue.length > 0 
-            ? player.queue.slice(0, 10).map((track, i) => `**${i + 1}.** [${track.info.title}](${track.info.uri}) \`[${formatTime(track.info.length)}]\``).join('\n')
-            : 'The queue is currently empty.';
+        let queueStr = 'The queue is currently empty.';
+        if (player.queue.length > 0) {
+            const tracks = player.queue.slice(0, 10).map((track, i) => {
+                const title = track.info?.title ?? track.title ?? 'Unknown Track';
+                const uri = track.info?.uri ?? '';
+                const lengthStr = track.info?.length ? ` \`[${formatTime(track.info.length)}]\`` : '';
+                const link = uri ? `[${title}](${uri})` : title;
+                return `**${i + 1}.** ${link}${lengthStr}`;
+            }).join('\n');
+
+            queueStr = tracks;
+            if (player.queue.length > 10) {
+                queueStr += `\n*... and ${player.queue.length - 10} more track(s)*`;
+            }
+        }
 
         const embed = buildEmbed({
             title: `Queue for ${interaction.guild.name}`,

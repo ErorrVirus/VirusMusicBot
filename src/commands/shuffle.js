@@ -1,17 +1,14 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
+const { validatePlayerConnection } = require('../utils/helpers');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('shuffle')
         .setDescription('Shuffle the current queue.'),
     async execute(interaction, client) {
-        const player = client.manager.getPlayer(interaction.guild.id);
-        if (!player || !player.current) return interaction.reply({ embeds: [errorEmbed('I am not playing anything.')], ephemeral: true });
-
-        if (interaction.member.voice.channelId !== player.voiceId) {
-            return interaction.reply({ embeds: [errorEmbed('You must be in my voice channel to use this command.')], ephemeral: true });
-        }
+        const { player, error } = validatePlayerConnection(interaction, client);
+        if (error) return interaction.reply(error);
 
         if (player.queue.length === 0) {
             return interaction.reply({ embeds: [errorEmbed('There are no songs in the queue to shuffle.')], ephemeral: true });
