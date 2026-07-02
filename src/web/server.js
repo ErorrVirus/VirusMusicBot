@@ -1,9 +1,9 @@
 const express = require('express');
-const basicAuth = require('express-basic-auth');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
 
 // S-1: Escape all characters that are meaningful in HTML to prevent XSS
 function escapeHtml(str) {
@@ -35,6 +35,9 @@ module.exports = (client) => {
     const app = express();
     const port = 4000;
 
+    // Body parsing middleware for login form POST submissions
+    app.use(express.urlencoded({ extended: false }));
+
     app.use(helmet({
         contentSecurityPolicy: {
             directives: {
@@ -42,6 +45,7 @@ module.exports = (client) => {
                 scriptSrc:  ["'self'"],
                 fontSrc:    ["'self'", "https://fonts.gstatic.com"],
                 styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+                imgSrc:     ["'self'", "data:"],
             },
         },
         strictTransportSecurity: false,
@@ -62,13 +66,238 @@ module.exports = (client) => {
         console.warn('[Dashboard] ⚠️  Falling back to default credentials (admin/admin123).');
     }
 
-    app.use(basicAuth({
-        users: { [user]: pass },
-        challenge: true,
-        realm: 'Developer Dashboard'
-    }));
+    // Helper: Parse auth token cookie
+    const getAuthToken = (req) => {
+        const list = {};
+        const rc = req.headers.cookie;
+        if (rc) {
+            rc.split(';').forEach(cookie => {
+                const parts = cookie.split('=');
+                list[parts.shift().trim()] = decodeURIComponent(parts.join('='));
+            });
+        }
+        return list.dashboard_token;
+    };
 
-    app.get('/', (req, res) => {
+    // Helper: Middleware to verify cookie authentication
+    const checkAuth = (req, res, next) => {
+        const token = getAuthToken(req);
+        const expectedToken = Buffer.from(`${user}:${pass}`).toString('base64');
+        if (token === expectedToken) {
+            return next();
+        }
+        res.redirect('/login');
+    };
+
+    // Public Asset Route: Serve bot logo
+    app.get('/logo.jpg', (req, res) => {
+        const logoPath = path.join(__dirname, 'logo.jpg');
+        if (fs.existsSync(logoPath)) {
+            res.sendFile(logoPath);
+        } else {
+            // Fallback to pixel if not found
+            res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
+        }
+    });
+
+    // Custom Login GET Route
+    app.get('/login', (req, res) => {
+        const errorMsg = req.query.error ? decodeURIComponent(req.query.error) : '';
+        const errorAlert = errorMsg ? `<div class="error-alert">${escapeHtml(errorMsg)}</div>` : '';
+
+        const html = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>VirusMusicPro — Login</title>
+            <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                :root {
+                    --bg-dark: #09090b;
+                    --card-bg: #141416;
+                    --border-color: #27272a;
+                    --text-primary: #f4f4f5;
+                    --text-secondary: #a1a1aa;
+                    --accent-color: #10b981;
+                    --accent-hover: #059669;
+                    --error-color: #ef4444;
+                }
+
+                * {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    font-family: 'Plus Jakarta Sans', sans-serif;
+                    background-color: var(--bg-dark);
+                    background-image: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.12) 0%, transparent 60%);
+                    color: var(--text-primary);
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                }
+
+                .login-card {
+                    background-color: var(--card-bg);
+                    border: 1px solid var(--border-color);
+                    border-radius: 24px;
+                    width: 100%;
+                    max-width: 400px;
+                    padding: 40px 32px;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                }
+
+                .logo-wrapper {
+                    width: 96px;
+                    height: 96px;
+                    border-radius: 50%;
+                    border: 2px solid var(--accent-color);
+                    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+                    overflow: hidden;
+                    margin-bottom: 24px;
+                }
+
+                .logo-wrapper img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .brand-title {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    letter-spacing: -0.5px;
+                    margin-bottom: 8px;
+                    text-align: center;
+                }
+
+                .brand-desc {
+                    font-size: 0.85rem;
+                    color: var(--text-secondary);
+                    margin-bottom: 32px;
+                    text-align: center;
+                }
+
+                form {
+                    width: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                }
+
+                .input-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .input-group label {
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .input-group input {
+                    width: 100%;
+                    background-color: rgba(24, 24, 27, 0.6);
+                    border: 1px solid var(--border-color);
+                    color: var(--text-primary);
+                    padding: 14px 16px;
+                    border-radius: 12px;
+                    font-family: inherit;
+                    font-size: 0.95rem;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                }
+
+                .input-group input:focus {
+                    outline: none;
+                    border-color: var(--accent-color);
+                    box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+                }
+
+                .error-alert {
+                    width: 100%;
+                    background-color: rgba(239, 68, 68, 0.1);
+                    border: 1px solid rgba(239, 68, 68, 0.2);
+                    color: var(--error-color);
+                    padding: 12px 16px;
+                    border-radius: 12px;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    margin-bottom: 24px;
+                    text-align: center;
+                }
+
+                .btn-submit {
+                    background-color: var(--accent-color);
+                    color: #fff;
+                    border: none;
+                    padding: 14px;
+                    border-radius: 12px;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: background-color 0.2s ease;
+                    margin-top: 8px;
+                }
+
+                .btn-submit:hover {
+                    background-color: var(--accent-hover);
+                }
+            </style>
+        </head>
+        <body>
+            <div class="login-card">
+                <div class="logo-wrapper">
+                    <img src="/logo.jpg" alt="Bot Logo">
+                </div>
+                <h1 class="brand-title">VirusMusicPro</h1>
+                <p class="brand-desc">Sign in to control dashboard</p>
+
+                ${errorAlert}
+
+                <form method="POST" action="/login">
+                    <div class="input-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" placeholder="Enter username" required autocomplete="username">
+                    </div>
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-submit">Sign In</button>
+                </form>
+            </div>
+        </body>
+        </html>
+        `;
+        res.send(html);
+    });
+
+    // Custom Login POST Route
+    app.post('/login', (req, res) => {
+        const { username, password } = req.body;
+        if (username === user && password === pass) {
+            const token = Buffer.from(`${user}:${pass}`).toString('base64');
+            res.setHeader('Set-Cookie', `dashboard_token=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=2592000`);
+            return res.redirect('/');
+        }
+        res.redirect('/login?error=' + encodeURIComponent('Invalid username or password.'));
+    });
+
+    // Dashboard GET Route (Protected)
+    app.get('/', checkAuth, (req, res) => {
         const totalServers = client.guilds.cache.size;
         const totalUsers = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
         const uptimeStr = formatDuration(client.uptime);
@@ -164,13 +393,16 @@ module.exports = (client) => {
                 .brand-avatar {
                     width: 48px;
                     height: 48px;
-                    border-radius: 12px;
-                    background: linear-gradient(135deg, var(--accent-color), #3b82f6);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 24px;
+                    border-radius: 50%;
+                    border: 2px solid var(--accent-color);
                     box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+                    overflow: hidden;
+                }
+
+                .brand-avatar img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
                 }
 
                 .brand-text h1 {
@@ -388,7 +620,9 @@ module.exports = (client) => {
             <div class="container">
                 <header>
                     <div class="brand-section">
-                        <div class="brand-avatar">🎵</div>
+                        <div class="brand-avatar">
+                            <img src="/logo.jpg" alt="Virus Logo">
+                        </div>
                         <div class="brand-text">
                             <h1>VirusMusicPro</h1>
                             <p>Developer Control Dashboard</p>
