@@ -25,6 +25,9 @@ services:
     ports:
       # Exposed to the local network so you can access it via your TrueNAS IP
       - "4000:4000"
+    volumes:
+      - ${SSL_CRT_HOST_PATH:-./certificate.crt}:/certs/certificate.crt:ro
+      - ${SSL_KEY_HOST_PATH:-./private.key}:/certs/private.key:ro
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DISCORD_TOKEN}
@@ -38,6 +41,8 @@ services:
       - SPOTIFY_SPDC=${SPOTIFY_SPDC}
       - DASHBOARD_USER=${DASHBOARD_USER:-admin}
       - DASHBOARD_PASS=${DASHBOARD_PASS:-admin123}
+      - SSL_CRT_PATH=${SSL_CRT_PATH}
+      - SSL_KEY_PATH=${SSL_KEY_PATH}
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.2.2
