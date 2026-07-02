@@ -16,21 +16,6 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
-const formatDuration = (ms) => {
-    if (!ms) return '0s';
-    const seconds = Math.floor((ms / 1000) % 60);
-    const minutes = Math.floor((ms / (1000 * 60)) % 60);
-    const hours   = Math.floor((ms / (1000 * 60 * 60)) % 24);
-    const days    = Math.floor(ms / (1000 * 60 * 60 * 24));
-
-    const parts = [];
-    if (days > 0) parts.push(`${days}d`);
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (seconds > 0) parts.push(`${seconds}s`);
-    return parts.join(' ') || '0s';
-};
-
 module.exports = (client) => {
     const app = express();
     const port = 4000;
@@ -51,12 +36,13 @@ module.exports = (client) => {
         strictTransportSecurity: false,
     }));
 
-    const limiter = rateLimit({
-        windowMs: 15 * 60 * 1000,
-        max: 50,
+    // Rate limiter: restrict brute-force attacks on the /login endpoint only
+    const loginLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 mins
+        max: 15, // Max 15 attempts to prevent blocking regular page updates
         message: 'Too many login attempts from this IP, please try again after 15 minutes.'
     });
-    app.use(limiter);
+    app.use('/login', loginLimiter);
 
     const user = process.env.DASHBOARD_USER || 'admin';
     const pass = process.env.DASHBOARD_PASS || 'admin123';
@@ -98,6 +84,39 @@ module.exports = (client) => {
             // Fallback to pixel if not found
             res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
         }
+    });
+
+    // Public Client Script Route (updates Uptime counter every second in real-time)
+    app.get('/script.js', (req, res) => {
+        res.setHeader('Content-Type', 'application/javascript');
+        res.send(`
+            document.addEventListener('DOMContentLoaded', () => {
+                const display = document.getElementById('uptime-display');
+                if (!display) return;
+                
+                const startTime = parseInt(display.getAttribute('data-start'));
+                
+                const updateUptime = () => {
+                    const diff = Date.now() - startTime;
+                    
+                    const seconds = Math.floor((diff / 1000) % 60);
+                    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                    const hours   = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                    const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    
+                    const parts = [];
+                    if (days > 0) parts.push(days + 'd');
+                    if (hours > 0) parts.push(hours + 'h');
+                    if (minutes > 0) parts.push(minutes + 'm');
+                    parts.push(seconds + 's');
+                    
+                    display.textContent = parts.join(' ');
+                };
+                
+                updateUptime();
+                setInterval(updateUptime, 1000);
+            });
+        `);
     });
 
     // Custom Login GET Route
@@ -296,11 +315,17 @@ module.exports = (client) => {
         res.redirect('/login?error=' + encodeURIComponent('Invalid username or password.'));
     });
 
+    // Custom Logout Route
+    app.get('/logout', (req, res) => {
+        res.setHeader('Set-Cookie', 'dashboard_token=; Path=/; HttpOnly; SameSite=Strict; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+        res.redirect('/login');
+    });
+
     // Dashboard GET Route (Protected)
     app.get('/', checkAuth, (req, res) => {
         const totalServers = client.guilds.cache.size;
         const totalUsers = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
-        const uptimeStr = formatDuration(client.uptime);
+        const botStartTime = Date.now() - client.uptime;
         
         let activeStreamsHTML = '';
         let activeCount = 0;
@@ -341,6 +366,7 @@ module.exports = (client) => {
             <meta http-equiv="refresh" content="15">
             <title>VirusMusicPro — Developer Dashboard</title>
             <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            <script src="/script.js" defer></script>
             <style>
                 :root {
                     --bg-dark: #09090b;
@@ -352,6 +378,7 @@ module.exports = (client) => {
                     --accent-hover: #059669;
                     --accent-light: rgba(16, 185, 129, 0.1);
                     --pulse-color: #10b981;
+                    --error-color: #ef4444;
                 }
 
                 * {
@@ -416,6 +443,12 @@ module.exports = (client) => {
                     color: var(--text-secondary);
                 }
 
+                .header-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
                 .status-badge {
                     display: flex;
                     align-items: center;
@@ -434,6 +467,24 @@ module.exports = (client) => {
                     border-radius: 50%;
                     background-color: var(--accent-color);
                     box-shadow: 0 0 12px var(--accent-color);
+                }
+
+                .btn-logout {
+                    background-color: transparent;
+                    border: 1px solid var(--border-color);
+                    color: var(--text-secondary);
+                    padding: 8px 16px;
+                    border-radius: 9999px;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    text-decoration: none;
+                    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+                }
+
+                .btn-logout:hover {
+                    border-color: var(--error-color);
+                    color: #fff;
+                    background-color: rgba(239, 68, 68, 0.1);
                 }
 
                 .stats-grid {
@@ -610,8 +661,9 @@ module.exports = (client) => {
                         align-items: flex-start;
                         gap: 16px;
                     }
-                    .status-badge {
-                        align-self: flex-start;
+                    .header-right {
+                        width: 100%;
+                        justify-content: space-between;
                     }
                 }
             </style>
@@ -628,16 +680,19 @@ module.exports = (client) => {
                             <p>Developer Control Dashboard</p>
                         </div>
                     </div>
-                    <div class="status-badge">
-                        <div class="status-dot"></div>
-                        <span>Active Connection</span>
+                    <div class="header-right">
+                        <div class="status-badge">
+                            <div class="status-dot"></div>
+                            <span>Active Connection</span>
+                        </div>
+                        <a href="/logout" class="btn-logout">Log Out</a>
                     </div>
                 </header>
                 
                 <div class="stats-grid">
                     <div class="stat-card">
                         <p>Uptime</p>
-                        <h2>${uptimeStr}</h2>
+                        <h2 id="uptime-display" data-start="${botStartTime}">Calculating...</h2>
                     </div>
                     <div class="stat-card">
                         <p>Total Servers</p>
