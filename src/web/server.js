@@ -29,6 +29,8 @@ module.exports = (client) => {
                 scriptSrc:  ["'self'"],
             },
         },
+        // Disable HSTS so browsers don't force HTTPS on local IP/HTTP access
+        strictTransportSecurity: false,
     }));
 
     // Security: Prevent brute-force password guessing
