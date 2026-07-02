@@ -2,9 +2,10 @@ const express = require('express');
 const basicAuth = require('express-basic-auth');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const https = require('https');
+const fs = require('fs');
 
-// S-1: Escape all characters that are meaningful in HTML to prevent XSS from
-// Discord guild names, track titles, or artist names being injected into the page.
+// S-1: Escape all characters that are meaningful in HTML to prevent XSS
 function escapeHtml(str) {
     if (str == null) return '';
     return String(str)
@@ -15,28 +16,40 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+const formatDuration = (ms) => {
+    if (!ms) return '0s';
+    const seconds = Math.floor((ms / 1000) % 60);
+    const minutes = Math.floor((ms / (1000 * 60)) % 60);
+    const hours   = Math.floor((ms / (1000 * 60 * 60)) % 24);
+    const days    = Math.floor(ms / (1000 * 60 * 60 * 24));
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0) parts.push(`${seconds}s`);
+    return parts.join(' ') || '0s';
+};
+
 module.exports = (client) => {
     const app = express();
     const port = 4000;
 
-    // Security: Protect HTTP Headers.
-    // S-3: 'unsafe-inline' removed — auto-refresh is now done via <meta http-equiv="refresh">
-    // so no inline scripts are needed at all.
     app.use(helmet({
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
                 scriptSrc:  ["'self'"],
+                fontSrc:    ["'self'", "https://fonts.gstatic.com"],
+                styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             },
         },
-        // Disable HSTS so browsers don't force HTTPS on local IP/HTTP access
         strictTransportSecurity: false,
     }));
 
-    // Security: Prevent brute-force password guessing
     const limiter = rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 50, // Limit each IP to 50 requests per window
+        windowMs: 15 * 60 * 1000,
+        max: 50,
         message: 'Too many login attempts from this IP, please try again after 15 minutes.'
     });
     app.use(limiter);
@@ -44,16 +57,11 @@ module.exports = (client) => {
     const user = process.env.DASHBOARD_USER || 'admin';
     const pass = process.env.DASHBOARD_PASS || 'admin123';
 
-    // S-2: Warn loudly if the operator is using the default credentials so it
-    // cannot be missed in logs. The dashboard still starts — a hard crash would
-    // break deployments that intentionally run behind a private network.
     if (!process.env.DASHBOARD_USER || !process.env.DASHBOARD_PASS) {
         console.warn('[Dashboard] ⚠️  WARNING: DASHBOARD_USER and/or DASHBOARD_PASS are not set.');
         console.warn('[Dashboard] ⚠️  Falling back to default credentials (admin/admin123).');
-        console.warn('[Dashboard] ⚠️  Set DASHBOARD_USER and DASHBOARD_PASS in your .env to secure the dashboard.');
     }
 
-    // Basic Authentication
     app.use(basicAuth({
         users: { [user]: pass },
         challenge: true,
@@ -61,9 +69,9 @@ module.exports = (client) => {
     }));
 
     app.get('/', (req, res) => {
-        // Collect metrics
         const totalServers = client.guilds.cache.size;
         const totalUsers = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
+        const uptimeStr = formatDuration(client.uptime);
         
         let activeStreamsHTML = '';
         let activeCount = 0;
@@ -74,13 +82,17 @@ module.exports = (client) => {
                     activeCount++;
                     const guild = client.guilds.cache.get(player.guildId);
                     const guildName = guild ? guild.name : 'Unknown Server';
-                    // S-1: escape every user-controlled field before injection into HTML
                     activeStreamsHTML += `
                         <tr>
-                            <td>${escapeHtml(guildName)}</td>
-                            <td><a href="${escapeHtml(player.current.info.uri)}" target="_blank">${escapeHtml(player.current.info.title)}</a></td>
-                            <td>${escapeHtml(player.current.info.author)}</td>
-                            <td>${player.queue.length} in queue</td>
+                            <td>
+                                <div class="guild-info">
+                                    <div class="status-pulse active"></div>
+                                    <span>${escapeHtml(guildName)}</span>
+                                </div>
+                            </td>
+                            <td><a class="song-link" href="${escapeHtml(player.current.info.uri)}" target="_blank">${escapeHtml(player.current.info.title)}</a></td>
+                            <td><span class="artist-badge">${escapeHtml(player.current.info.author)}</span></td>
+                            <td><span class="queue-badge">${player.queue.length} track(s)</span></td>
                         </tr>
                     `;
                 }
@@ -88,125 +100,345 @@ module.exports = (client) => {
         }
 
         if (activeCount === 0) {
-            activeStreamsHTML = `<tr><td colspan="4" style="text-align: center;">No active streams right now.</td></tr>`;
+            activeStreamsHTML = `<tr><td colspan="4" style="text-align: center; color: #71717a; padding: 30px;">No active music streams right now.</td></tr>`;
         }
 
-        // Dashboard HTML
         const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <!-- S-3: meta refresh replaces the <script>setTimeout</script> block so
-                 the Content-Security-Policy no longer needs 'unsafe-inline' -->
             <meta http-equiv="refresh" content="15">
-            <title>Bot Developer Dashboard</title>
+            <title>VirusMusicPro — Developer Dashboard</title>
+            <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
             <style>
-                body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background-color: #121212;
-                    color: #ffffff;
-                    margin: 0;
-                    padding: 20px;
+                :root {
+                    --bg-dark: #09090b;
+                    --card-bg: #141416;
+                    --border-color: #27272a;
+                    --text-primary: #f4f4f5;
+                    --text-secondary: #a1a1aa;
+                    --accent-color: #10b981;
+                    --accent-hover: #059669;
+                    --accent-light: rgba(16, 185, 129, 0.1);
+                    --pulse-color: #10b981;
                 }
+
+                * {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                body {
+                    font-family: 'Plus Jakarta Sans', sans-serif;
+                    background-color: var(--bg-dark);
+                    background-image: radial-gradient(circle at 50% -20%, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
+                    color: var(--text-primary);
+                    min-height: 100vh;
+                    padding: 40px 20px;
+                    line-height: 1.5;
+                }
+
                 .container {
-                    max-width: 1000px;
+                    max-width: 1100px;
                     margin: 0 auto;
                 }
-                h1 {
-                    color: #1DB954;
-                    border-bottom: 2px solid #333;
-                    padding-bottom: 10px;
+
+                header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 40px;
+                    padding-bottom: 20px;
+                    border-bottom: 1px solid var(--border-color);
                 }
+
+                .brand-section {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                .brand-avatar {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 12px;
+                    background: linear-gradient(135deg, var(--accent-color), #3b82f6);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 24px;
+                    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+                }
+
+                .brand-text h1 {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    letter-spacing: -0.5px;
+                }
+
+                .brand-text p {
+                    font-size: 0.85rem;
+                    color: var(--text-secondary);
+                }
+
+                .status-badge {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    background-color: rgba(24, 24, 27, 0.5);
+                    border: 1px solid var(--border-color);
+                    padding: 8px 16px;
+                    border-radius: 9999px;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                }
+
+                .status-dot {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background-color: var(--accent-color);
+                    box-shadow: 0 0 12px var(--accent-color);
+                }
+
                 .stats-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
                     gap: 20px;
-                    margin-bottom: 30px;
+                    margin-bottom: 40px;
                 }
+
                 .stat-card {
-                    background-color: #1e1e1e;
-                    padding: 20px;
-                    border-radius: 8px;
-                    text-align: center;
-                    border: 1px solid #333;
+                    background-color: var(--card-bg);
+                    border: 1px solid var(--border-color);
+                    padding: 24px;
+                    border-radius: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    transition: transform 0.2s ease, border-color 0.2s ease;
                 }
-                .stat-card h2 {
-                    margin: 0;
-                    font-size: 2.5em;
-                    color: #1DB954;
+
+                .stat-card:hover {
+                    transform: translateY(-2px);
+                    border-color: rgba(16, 185, 129, 0.3);
                 }
+
                 .stat-card p {
-                    margin: 5px 0 0;
-                    color: #aaa;
+                    font-size: 0.85rem;
                     text-transform: uppercase;
-                    font-size: 0.9em;
-                    letter-spacing: 1px;
+                    letter-spacing: 0.5px;
+                    color: var(--text-secondary);
+                    font-weight: 600;
                 }
+
+                .stat-card h2 {
+                    font-size: 2.25rem;
+                    font-weight: 700;
+                    letter-spacing: -1px;
+                }
+
+                .stat-card.accent h2 {
+                    color: var(--accent-color);
+                }
+
+                .dashboard-section {
+                    background-color: var(--card-bg);
+                    border: 1px solid var(--border-color);
+                    border-radius: 16px;
+                    overflow: hidden;
+                }
+
+                .section-header {
+                    padding: 24px;
+                    border-bottom: 1px solid var(--border-color);
+                }
+
+                .section-header h2 {
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .table-container {
+                    overflow-x: auto;
+                }
+
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    background-color: #1e1e1e;
-                    border-radius: 8px;
-                    overflow: hidden;
                 }
+
                 th, td {
-                    padding: 15px;
+                    padding: 16px 24px;
                     text-align: left;
-                    border-bottom: 1px solid #333;
                 }
+
                 th {
-                    background-color: #2a2a2a;
-                    color: #aaa;
+                    background-color: rgba(24, 24, 27, 0.3);
+                    color: var(--text-secondary);
+                    font-size: 0.8rem;
                     text-transform: uppercase;
-                    font-size: 0.85em;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
                 }
-                tr:hover {
-                    background-color: #252525;
+
+                tr {
+                    border-bottom: 1px solid var(--border-color);
                 }
-                a {
-                    color: #1DB954;
+
+                tr:last-child {
+                    border-bottom: none;
+                }
+
+                tr:hover td {
+                    background-color: rgba(24, 24, 27, 0.2);
+                }
+
+                .guild-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    font-weight: 500;
+                }
+
+                .status-pulse {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background-color: var(--accent-color);
+                    position: relative;
+                }
+
+                .status-pulse.active::after {
+                    content: '';
+                    position: absolute;
+                    width: 100%;
+                    height: 100%;
+                    border-radius: 50%;
+                    background-color: var(--accent-color);
+                    animation: pulse 1.5s infinite ease-in-out;
+                    left: 0;
+                    top: 0;
+                }
+
+                .song-link {
+                    color: var(--text-primary);
                     text-decoration: none;
+                    font-weight: 600;
+                    transition: color 0.15s ease;
                 }
-                a:hover {
+
+                .song-link:hover {
+                    color: var(--accent-color);
                     text-decoration: underline;
+                }
+
+                .artist-badge {
+                    background-color: rgba(255, 255, 255, 0.05);
+                    padding: 4px 10px;
+                    border-radius: 6px;
+                    font-size: 0.85rem;
+                    color: var(--text-secondary);
+                    border: 1px solid rgba(255, 255, 255, 0.02);
+                }
+
+                .queue-badge {
+                    background-color: var(--accent-light);
+                    color: var(--accent-color);
+                    padding: 4px 10px;
+                    border-radius: 6px;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    border: 1px solid rgba(16, 185, 129, 0.15);
+                }
+
+                @keyframes pulse {
+                    0% {
+                        transform: scale(1);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: scale(2.5);
+                        opacity: 0;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    body {
+                        padding: 20px 10px;
+                    }
+                    header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 16px;
+                    }
+                    .status-badge {
+                        align-self: flex-start;
+                    }
                 }
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>🎵 Developer Dashboard</h1>
+                <header>
+                    <div class="brand-section">
+                        <div class="brand-avatar">🎵</div>
+                        <div class="brand-text">
+                            <h1>VirusMusicPro</h1>
+                            <p>Developer Control Dashboard</p>
+                        </div>
+                    </div>
+                    <div class="status-badge">
+                        <div class="status-dot"></div>
+                        <span>Active Connection</span>
+                    </div>
+                </header>
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <h2>${totalServers}</h2>
+                        <p>Uptime</p>
+                        <h2>${uptimeStr}</h2>
+                    </div>
+                    <div class="stat-card">
                         <p>Total Servers</p>
+                        <h2>${totalServers}</h2>
                     </div>
                     <div class="stat-card">
-                        <h2>${totalUsers}</h2>
                         <p>Total Users</p>
+                        <h2>${totalUsers}</h2>
                     </div>
-                    <div class="stat-card">
-                        <h2>${activeCount}</h2>
+                    <div class="stat-card accent">
                         <p>Active Streams</p>
+                        <h2>${activeCount}</h2>
                     </div>
                 </div>
 
-                <h2>🔴 Live Streams</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Server Name</th>
-                            <th>Playing Song</th>
-                            <th>Artist</th>
-                            <th>Queue</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${activeStreamsHTML}
-                    </tbody>
-                </table>
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h2>🔊 Live Playback Streams</h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Guild/Server</th>
+                                    <th>Song Title</th>
+                                    <th>Artist</th>
+                                    <th>Queue Size</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${activeStreamsHTML}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </body>
         </html>
@@ -215,7 +447,33 @@ module.exports = (client) => {
         res.send(html);
     });
 
-    app.listen(port, () => {
-        console.log(`[Dashboard] Developer dashboard is running on port ${port}`);
-    });
+    const sslCrt = process.env.SSL_CRT_PATH;
+    const sslKey = process.env.SSL_KEY_PATH;
+
+    if (sslCrt && sslKey && fs.existsSync(sslCrt) && fs.existsSync(sslKey)) {
+        try {
+            const options = {
+                key: fs.readFileSync(sslKey),
+                cert: fs.readFileSync(sslCrt)
+            };
+            https.createServer(options, app).listen(port, () => {
+                console.log(`[Dashboard] 🔒 Secure dashboard (HTTPS) running on port ${port}`);
+            });
+        } catch (err) {
+            console.error('[Dashboard] ❌ Failed to start HTTPS server, falling back to HTTP:', err.message);
+            startHttp(app, port);
+        }
+    } else {
+        if (sslCrt || sslKey) {
+            console.warn('[Dashboard] ⚠️  SSL certificate paths configured but files not found or unreadable.');
+        }
+        startHttp(app, port);
+    }
 };
+
+function startHttp(app, port) {
+    app.listen(port, () => {
+        console.log(`[Dashboard] 🔓 Dashboard (HTTP) running on port ${port}`);
+        console.log('[Dashboard] 💡 For HTTPS, configure SSL_CRT_PATH and SSL_KEY_PATH in your .env');
+    });
+}
