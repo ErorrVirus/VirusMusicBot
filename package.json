@@ -16,7 +16,7 @@
     "helmet": "^8.2.0",
     "shoukaku": "^4.3.0",
     "spotify-uri": "^4.1.0",
-    "spotify-url-info": "^3.3.0"
+    "spotify-url-info": "^3.3.1"
   },
   "author": "Antigravity",
   "license": "ISC"

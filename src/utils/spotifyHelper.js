@@ -279,8 +279,7 @@ async function getSingleTrack(trackId) {
             }
         }
         
-        // Fallback
-        const { getData } = require('spotify-url-info')(fetch);
+        // Fallback: getData is already required at the top of this module
         const data = await getData(`https://open.spotify.com/track/${trackId}`);
         return { name: data?.title || data?.name || '', artist: data?.subtitle || data?.artists?.[0]?.name || '' };
     } catch (err) {

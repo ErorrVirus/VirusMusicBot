@@ -1,9 +1,9 @@
 const { EventEmitter } = require('events');
 const { Shoukaku, Connectors } = require('shoukaku');
+const { ActivityType } = require('discord.js');
+const { buildNowPlayingEmbed, buildControlRow, buildEmbed } = require('../utils/embedBuilder');
 const MusicPlayer = require('./MusicPlayer');
 const config = require('../config');
-// Row builders are imported lazily inside the playerStart handler to avoid
-// circular-dependency issues at module load time.
 
 class MusicManager extends EventEmitter {
     constructor(client) {
@@ -45,8 +45,6 @@ class MusicManager extends EventEmitter {
             const channel = this.client.channels.cache.get(player.textId);
             if (!channel) return;
 
-            const { buildNowPlayingEmbed, buildControlRow, buildVolumeMenu } = require('../utils/embedBuilder');
-            const { ActivityType } = require('discord.js');
 
             // Set Bot Activity — generic to protect server privacy
             this.client.user.setActivity('music 🎵', { type: ActivityType.Listening });
@@ -65,12 +63,10 @@ class MusicManager extends EventEmitter {
 
         this.on('playerEmpty', (player) => {
             // Restore Bot Activity
-            const { ActivityType } = require('discord.js');
             this.client.user.setActivity('ready to play any song', { type: ActivityType.Playing });
             
             const channel = this.client.channels.cache.get(player.textId);
             if (channel) {
-                const { buildEmbed } = require('../utils/embedBuilder');
                 channel.send({ embeds: [buildEmbed({ description: 'Queue concluded. Disconnecting in 1 minute if no tracks are added.' })] }).catch(() => {});
             }
 
@@ -102,16 +98,9 @@ class MusicManager extends EventEmitter {
             console.warn(`Track stuck in guild ${player.guildId}:`, data);
         });
 
-        // Direct voiceStateUpdate listener to guarantee we catch the disconnect
-        this.client.on('voiceStateUpdate', (oldState, newState) => {
-            if (oldState.id === this.client.user.id && oldState.channelId && !newState.channelId) {
-                const p = this.getPlayer(oldState.guild.id);
-                if (p) {
-                    console.log(`[MusicManager-VSU] Bot disconnected from voice in ${oldState.guild.id}. Destroying player...`);
-                    p.destroy('Manual disconnect');
-                }
-            }
-        });
+        // Note: voiceStateUpdate for bot disconnects is handled by events/voiceStateUpdate.js
+        // via the event handler system. A duplicate listener was removed here (H-1) to prevent
+        // player.destroy() from being called twice on the same disconnect event.
     }
 
     async createPlayer(options) {

@@ -34,7 +34,9 @@ module.exports = {
 
         const [moved] = player.queue.splice(from - 1, 1);
         player.queue.splice(to - 1, 0, moved);
-        
-        interaction.reply({ embeds: [successEmbed(`Moved **${moved.info.title}** to position **${to}**.`)] });
+
+        // H-4: isUnresolved Spotify tracks don't have .info yet (JIT resolve pending)
+        const trackName = moved.info?.title ?? moved.title ?? 'Unknown track';
+        interaction.reply({ embeds: [successEmbed(`Moved **${trackName}** to position **${to}**.`)] });
     }
 };

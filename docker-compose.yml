@@ -23,7 +23,10 @@ services:
       echo 'Lavalink is healthy — starting bot...' &&
       node src/index.js"
     ports:
-      - "4000:4000"
+      # S-7: Bind to loopback only — dashboard is not exposed to the public internet.
+      # Access via SSH tunnel or a local reverse proxy. Remove the 127.0.0.1: prefix
+      # if you intentionally need remote access and have a firewall rule protecting port 4000.
+      - "127.0.0.1:4000:4000"
     environment:
       - NODE_ENV=production
       - DISCORD_TOKEN=${DISCORD_TOKEN}

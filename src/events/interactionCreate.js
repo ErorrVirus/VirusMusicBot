@@ -1,6 +1,5 @@
-const { EmbedBuilder } = require('discord.js');
-const { errorEmbed, buildNowPlayingEmbed, buildControlRow } = require('../utils/embedBuilder');
-const { buildVolumeBar } = require('../utils/helpers');
+const { ActivityType } = require('discord.js');
+const { errorEmbed, buildNowPlayingEmbed, buildControlRow, buildVolumeReplyEmbed } = require('../utils/embedBuilder');
 
 // Helper: rebuilds and edits the Now Playing message after any state change
 async function refreshNowPlaying(player, client) {
@@ -50,7 +49,6 @@ module.exports = {
                         // Flip the button icon and update the embed in place
                         await refreshNowPlaying(player, client);
 
-                        const { ActivityType } = require('discord.js');
                         client.user.setActivity(
                             player.isPaused ? 'music (paused) ⏸️' : 'music 🎵',
                             { type: ActivityType.Listening }
@@ -81,22 +79,8 @@ module.exports = {
                         // Live-edit the Now Playing message — slider knob moves inside the embed
                         await refreshNowPlaying(player, client);
 
-                        // Ephemeral confirmation
-                        const { bar, color, label, icon } = buildVolumeBar(player.volume);
                         return interaction.reply({
-                            embeds: [
-                                new EmbedBuilder()
-                                    .setColor(color)
-                                    .setAuthor({ name: 'Volume Updated' })
-                                    .setDescription(
-                                        `\`\`\`\n${icon}  ${bar}  ${player.volume}%\n\`\`\`` +
-                                        `**${label}**`
-                                    )
-                                    .setFooter({
-                                        text:    `Decreased by ${interaction.user.username}`,
-                                        iconURL: interaction.user.displayAvatarURL()
-                                    })
-                            ],
+                            embeds: [buildVolumeReplyEmbed(player.volume, 'Decreased', interaction.user)],
                             ephemeral: true
                         });
                     }
@@ -109,22 +93,8 @@ module.exports = {
                         // Live-edit the Now Playing message — slider knob moves inside the embed
                         await refreshNowPlaying(player, client);
 
-                        // Ephemeral confirmation
-                        const { bar, color, label, icon } = buildVolumeBar(player.volume);
                         return interaction.reply({
-                            embeds: [
-                                new EmbedBuilder()
-                                    .setColor(color)
-                                    .setAuthor({ name: 'Volume Updated' })
-                                    .setDescription(
-                                        `\`\`\`\n${icon}  ${bar}  ${player.volume}%\n\`\`\`` +
-                                        `**${label}**`
-                                    )
-                                    .setFooter({
-                                        text:    `Increased by ${interaction.user.username}`,
-                                        iconURL: interaction.user.displayAvatarURL()
-                                    })
-                            ],
+                            embeds: [buildVolumeReplyEmbed(player.volume, 'Increased', interaction.user)],
                             ephemeral: true
                         });
                     }

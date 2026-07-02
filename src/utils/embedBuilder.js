@@ -96,5 +96,31 @@ module.exports = {
                 .setEmoji('🔊')
                 .setStyle(ButtonStyle.Secondary)
         );
+    },
+
+    // ── Volume confirmation reply ────────────────────────────────────────────
+    /**
+     * Builds the ephemeral volume-change confirmation embed.
+     * Extracted from D-2 — was copy-pasted identically for voldown and volup.
+     *
+     * @param {number} volume      Current player volume (1–200)
+     * @param {'Increased'|'Decreased'} direction
+     * @param {object} user        Discord user object (for footer)
+     * @returns {EmbedBuilder}
+     */
+    buildVolumeReplyEmbed: (volume, direction, user) => {
+        const { bar, color, label, icon } = buildVolumeBar(volume);
+        const slider = buildSliderBar(volume);
+        return new EmbedBuilder()
+            .setColor(color)
+            .setAuthor({ name: 'Volume Updated' })
+            .setDescription(
+                `\`\`\`\n${icon}  ${slider}  ${volume}%\n\`\`\`` +
+                `**${label}**`
+            )
+            .setFooter({
+                text:    `${direction} by ${user.username}`,
+                iconURL: user.displayAvatarURL()
+            });
     }
 };

@@ -15,5 +15,9 @@ module.exports = {
     validate() {
         if (!this.discord.token) throw new Error('DISCORD_TOKEN is missing from environment variables.');
         if (!this.discord.clientId) throw new Error('CLIENT_ID is missing from environment variables.');
+        // S-4: The default Lavalink password is publicly known — warn loudly if it is being used.
+        if (!process.env.LAVALINK_PASSWORD) {
+            console.warn('[Config] ⚠️  LAVALINK_PASSWORD is not set. Using default "youshallnotpass" — set a strong password in your .env!');
+        }
     }
 };

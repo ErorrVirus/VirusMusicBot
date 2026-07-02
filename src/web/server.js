@@ -3,16 +3,30 @@ const basicAuth = require('express-basic-auth');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
+// S-1: Escape all characters that are meaningful in HTML to prevent XSS from
+// Discord guild names, track titles, or artist names being injected into the page.
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 module.exports = (client) => {
     const app = express();
     const port = 4000;
 
-    // Security: Protect HTTP Headers (but allow inline scripts for our autorefresh)
+    // Security: Protect HTTP Headers.
+    // S-3: 'unsafe-inline' removed — auto-refresh is now done via <meta http-equiv="refresh">
+    // so no inline scripts are needed at all.
     app.use(helmet({
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc:  ["'self'"],
             },
         },
     }));
@@ -27,6 +41,15 @@ module.exports = (client) => {
 
     const user = process.env.DASHBOARD_USER || 'admin';
     const pass = process.env.DASHBOARD_PASS || 'admin123';
+
+    // S-2: Warn loudly if the operator is using the default credentials so it
+    // cannot be missed in logs. The dashboard still starts — a hard crash would
+    // break deployments that intentionally run behind a private network.
+    if (!process.env.DASHBOARD_USER || !process.env.DASHBOARD_PASS) {
+        console.warn('[Dashboard] ⚠️  WARNING: DASHBOARD_USER and/or DASHBOARD_PASS are not set.');
+        console.warn('[Dashboard] ⚠️  Falling back to default credentials (admin/admin123).');
+        console.warn('[Dashboard] ⚠️  Set DASHBOARD_USER and DASHBOARD_PASS in your .env to secure the dashboard.');
+    }
 
     // Basic Authentication
     app.use(basicAuth({
@@ -49,11 +72,12 @@ module.exports = (client) => {
                     activeCount++;
                     const guild = client.guilds.cache.get(player.guildId);
                     const guildName = guild ? guild.name : 'Unknown Server';
+                    // S-1: escape every user-controlled field before injection into HTML
                     activeStreamsHTML += `
                         <tr>
-                            <td>${guildName}</td>
-                            <td><a href="${player.current.info.uri}" target="_blank">${player.current.info.title}</a></td>
-                            <td>${player.current.info.author}</td>
+                            <td>${escapeHtml(guildName)}</td>
+                            <td><a href="${escapeHtml(player.current.info.uri)}" target="_blank">${escapeHtml(player.current.info.title)}</a></td>
+                            <td>${escapeHtml(player.current.info.author)}</td>
                             <td>${player.queue.length} in queue</td>
                         </tr>
                     `;
@@ -72,6 +96,9 @@ module.exports = (client) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <!-- S-3: meta refresh replaces the <script>setTimeout</script> block so
+                 the Content-Security-Policy no longer needs 'unsafe-inline' -->
+            <meta http-equiv="refresh" content="15">
             <title>Bot Developer Dashboard</title>
             <style>
                 body {
@@ -179,10 +206,6 @@ module.exports = (client) => {
                     </tbody>
                 </table>
             </div>
-            <script>
-                // Refresh the page every 15 seconds automatically
-                setTimeout(() => window.location.reload(), 15000);
-            </script>
         </body>
         </html>
         `;

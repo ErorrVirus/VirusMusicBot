@@ -97,7 +97,7 @@ class MusicPlayer {
         }
     }
 
-    playNext() {
+    async playNext() {
         if (this.current) {
             if (this.loop === 'track') {
                 this.queue.unshift(this.current);
@@ -116,7 +116,7 @@ class MusicPlayer {
             return;
         }
 
-        this.play();
+        await this.play();
     }
 
     playPrevious() {
@@ -143,7 +143,9 @@ class MusicPlayer {
                 this.player.setPaused(true);
                 this.player.stopTrack();
                 this.player.removeAllListeners();
-            } catch (err) {}
+            } catch (err) {
+                console.warn('[MusicPlayer] Non-fatal error during player teardown:', err.message);
+            }
             this.manager.shoukaku.leaveVoiceChannel(this.guildId);
         }
         
