@@ -5,6 +5,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 // S-1: Escape all characters that are meaningful in HTML to prevent XSS
 function escapeHtml(str) {
@@ -53,9 +54,6 @@ module.exports = (client) => {
         process.exit(1);
     }
 
-    // Generate a secure HMAC key from the password to sign cookies
-    const cookieSecret = crypto.createHash('sha256').update(pass).digest('hex');
-
     // Helper: Parse auth token cookie
     const getAuthToken = (req) => {
         const list = {};
@@ -75,12 +73,9 @@ module.exports = (client) => {
         if (!token) return res.redirect('/login');
 
         try {
-            const [username, signature, exp] = token.split('.');
-            if (Date.now() > parseInt(exp, 10)) return res.redirect('/login?error=' + encodeURIComponent('Session expired.'));
-
-            const expectedSignature = crypto.createHmac('sha256', cookieSecret).update(`${username}.${exp}`).digest('hex');
+            const decoded = jwt.verify(token, pass); // Use the password as the JWT secret
             
-            if (username === user && signature === expectedSignature) {
+            if (decoded.username === user) {
                 return next();
             }
         } catch (err) {}
@@ -321,9 +316,7 @@ module.exports = (client) => {
     app.post('/login', (req, res) => {
         const { username, password } = req.body;
         if (username === user && password === pass) {
-            const exp = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
-            const signature = crypto.createHmac('sha256', cookieSecret).update(`${username}.${exp}`).digest('hex');
-            const token = `${username}.${signature}.${exp}`;
+            const token = jwt.sign({ username }, pass, { expiresIn: '30d' });
             
             res.setHeader('Set-Cookie', `dashboard_token=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=2592000`);
             return res.redirect('/');

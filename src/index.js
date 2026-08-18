@@ -6,6 +6,14 @@ const MusicManager = require('./structures/MusicManager');
 // Validate environment variables
 config.validate();
 
+// Global Error Handlers to prevent silent crashes
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
