@@ -49,15 +49,17 @@ class MusicManager extends EventEmitter {
             // Set Bot Activity — generic to protect server privacy
             this.client.user.setActivity('music 🎵', { type: ActivityType.Listening });
 
-            // The embed contains the volume ▰▰▰▱▱ slider bar directly inside a field
-            const embed      = buildNowPlayingEmbed(track, player.volume || 100, this.client.user.displayAvatarURL());
-            // Single row: ⏸/▶ | ⏹ | ⏭ | 🔉 | 🔊
-            const controlRow = buildControlRow(player.isPaused);
+            try {
+                const embed      = buildNowPlayingEmbed(track, player.volume || 100, this.client.user.displayAvatarURL());
+                const controlRow = buildControlRow(player.isPaused);
 
-            // Store the message so volume changes can live-edit it
-            channel.send({ embeds: [embed], components: [controlRow] })
-                .then(msg => { player.nowPlayingMessage = msg; })
-                .catch(() => {});
+                channel.send({ embeds: [embed], components: [controlRow] })
+                    .then(msg => { player.nowPlayingMessage = msg; })
+                    .catch(() => {});
+            } catch (err) {
+                console.error('[MusicManager] Failed to build or send Now Playing embed:', err);
+                channel.send('🎵 Now playing a track, but failed to load track details.').catch(() => {});
+            }
         });
 
 
