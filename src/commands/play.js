@@ -181,11 +181,13 @@ module.exports = {
                         if (data && data.name) {
                             resolveQuery = `scsearch:${data.name} ${data.artist}`;
                         } else {
-                            resolveQuery = query;
+                            return interaction.editReply({ embeds: [errorEmbed('Could not fetch Spotify track. Make sure it is public.')] });
                         }
                     } catch {
-                        resolveQuery = query;
+                        return interaction.editReply({ embeds: [errorEmbed('Spotify track fetch timed out or failed.')] });
                     }
+                } else {
+                    return interaction.editReply({ embeds: [errorEmbed('Unsupported Spotify link type.')] });
                 }
             } else if (YOUTUBE_VIDEO.test(query)) {
                 // Convert YouTube URL to scsearch!
@@ -193,8 +195,10 @@ module.exports = {
                 if (video && video.name) {
                     resolveQuery = `scsearch:${video.name} ${video.artist}`;
                 } else {
-                    resolveQuery = query;
+                    return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info. Make sure it is public and not age-restricted.')] });
                 }
+            } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
+                return interaction.editReply({ embeds: [errorEmbed('Unsupported YouTube link type. Please send a direct video link.')] });
             } else if (!URL_REGEX.test(query)) {
                 resolveQuery = `scsearch:${query}`; // Plain text search
             }
