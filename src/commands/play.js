@@ -1,9 +1,11 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed, buildEmbed } = require('../utils/embedBuilder');
 const { getPlaylistTracks, getAlbumTracks, getArtistTracks, getSingleTrack, toSearchQuery } = require('../utils/spotifyHelper');
+const { getYouTubeSingleTrack } = require('../utils/youtubeHelper');
 const LOCALE_REGEX = /spotify\.com\/[a-zA-Z]{2}(?:-[a-zA-Z0-9]+)?\//;
 const SPOTIFY_URL = /spotify\.com\//;
 const URL_REGEX = /^https?:\/\//;
+const YOUTUBE_VIDEO = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/;
 
 const SPOTIFY_PLAYLIST = /open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/;
 const SPOTIFY_ALBUM    = /open\.spotify\.com\/album\/([A-Za-z0-9]+)/;
@@ -146,7 +148,7 @@ module.exports = {
             let resolveQuery = query;
 
             if (SPOTIFY_URL.test(query)) {
-                // If it's a Spotify track, we will convert it to ytsearch string to bypass LavaSrc TCP timeout!
+                // Spotify track → convert to ytsearch to bypass LavaSrc TCP timeout
                 const trackMatch = query.match(SPOTIFY_TRACK);
                 if (trackMatch) {
                     try {
@@ -160,6 +162,23 @@ module.exports = {
                         resolveQuery = query;
                     }
                 }
+            } else if (YOUTUBE_VIDEO.test(query)) {
+                // YouTube video URL → fetch title via noembed, then ytsearch
+                try {
+                    const video = await getYouTubeSingleTrack(query);
+                    if (video && video.name) {
+                        resolveQuery = `ytsearch:${video.name} ${video.artist} audio`;
+                        console.log(`[Play] YouTube URL converted to ytsearch: ${resolveQuery}`);
+                    } else {
+                        return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info. Make sure the video is public and not age-restricted.')] });
+                    }
+                } catch (e) {
+                    console.error('[Play] Failed to fetch YouTube video info:', e);
+                    return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info.')] });
+                }
+            } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
+                // Unsupported YouTube URL type (e.g. live, shorts without video ID)
+                return interaction.editReply({ embeds: [errorEmbed('Unsupported YouTube link. Please send a direct video link like `youtube.com/watch?v=...`')] });
             } else if (!URL_REGEX.test(query)) {
                 resolveQuery = `ytsearch:${query}`; // Plain text search
             }
