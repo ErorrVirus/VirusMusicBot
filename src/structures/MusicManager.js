@@ -1,6 +1,8 @@
 const { EventEmitter } = require('events');
 const { Shoukaku, Connectors } = require('shoukaku');
 const { ActivityType } = require('discord.js');
+const dns = require('node:dns');
+dns.setDefaultResultOrder('ipv4first');
 const { buildNowPlayingEmbed, buildControlRow, buildEmbed } = require('../utils/embedBuilder');
 const MusicPlayer = require('./MusicPlayer');
 const config = require('../config');
