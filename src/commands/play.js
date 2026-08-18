@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed, buildEmbed } = require('../utils/embedBuilder');
 const { getPlaylistTracks, getAlbumTracks, getArtistTracks, getSingleTrack, toSearchQuery } = require('../utils/spotifyHelper');
 const { getYouTubeSingleTrack, getYouTubePlaylistTracks } = require('../utils/youtubeHelper');
+const { buildSearchQueries } = require('../utils/searchCleaner');
 
 const SPOTIFY_URL      = /spotify\.com\//;
 const URL_REGEX        = /^https?:\/\//;
@@ -164,17 +165,16 @@ module.exports = {
         try {
             const player = await getPlayer();
 
-            let resolveQuery = query;
+            let candidateQueries = [];
 
             if (SPOTIFY_URL.test(query)) {
-                // Spotify track → convert to scsearch
+                // Spotify track → extract details & build candidates
                 const trackMatch = query.match(SPOTIFY_TRACK);
                 if (trackMatch) {
                     try {
                         const data = await getSingleTrack(trackMatch[1]);
                         if (data && data.name) {
-                            resolveQuery = `scsearch:${data.name} ${data.artist}`;
-                            console.log(`[Play] Spotify URL converted to scsearch: ${resolveQuery}`);
+                            candidateQueries = buildSearchQueries(data.name, data.artist);
                         } else {
                             return interaction.editReply({ embeds: [errorEmbed('Could not fetch Spotify track info. Please make sure the link is valid or search by song name.')] });
                         }
@@ -185,12 +185,11 @@ module.exports = {
                     return interaction.editReply({ embeds: [errorEmbed('Unsupported or unrecognized Spotify link format.')] });
                 }
             } else if (YOUTUBE_VIDEO.test(query)) {
-                // YouTube video URL → fetch title via noembed, then scsearch
+                // YouTube video URL → fetch title & build candidates
                 try {
                     const video = await getYouTubeSingleTrack(query);
                     if (video && video.name) {
-                        resolveQuery = `scsearch:${video.name} ${video.artist}`;
-                        console.log(`[Play] YouTube URL converted to scsearch: ${resolveQuery}`);
+                        candidateQueries = buildSearchQueries(video.name, video.artist);
                     } else {
                         return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info. Make sure the video is public and not age-restricted.')] });
                     }
@@ -201,10 +200,17 @@ module.exports = {
             } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
                 return interaction.editReply({ embeds: [errorEmbed('Unsupported YouTube link. Please send a direct video link like `youtube.com/watch?v=...`')] });
             } else if (!URL_REGEX.test(query)) {
-                resolveQuery = `scsearch:${query}`; // Plain text search via SoundCloud
+                candidateQueries = buildSearchQueries(query);
+            } else {
+                candidateQueries = [query];
             }
 
-            const result = await client.manager.resolve(resolveQuery, interaction.user);
+            let result = null;
+            for (const q of candidateQueries) {
+                console.log(`[Play] Trying search query: "${q}"`);
+                result = await client.manager.resolve(q, interaction.user);
+                if (result && result.tracks.length) break;
+            }
 
             if (!result || !result.tracks.length) {
                 return interaction.editReply({ embeds: [errorEmbed('No results found. If you used a Spotify link, Spotify might be blocking your server. Try searching by song name instead!')] });

@@ -1,4 +1,5 @@
 const { errorEmbed } = require('../utils/embedBuilder');
+const { buildSearchQueries } = require('../utils/searchCleaner');
 
 class MusicPlayer {
     constructor(manager, node, options) {
@@ -66,11 +67,16 @@ class MusicPlayer {
         // Just-In-Time (JIT) Resolving for Spotify/YouTube bypass
         if (this.current.isUnresolved) {
             try {
-                const res = await this.manager.resolve(`scsearch:${this.current.title} ${this.current.artist}`, this.current.requester);
+                const candidateQueries = buildSearchQueries(this.current.title, this.current.artist);
+                let res = null;
+                for (const q of candidateQueries) {
+                    res = await this.manager.resolve(q, this.current.requester);
+                    if (res && res.tracks.length) break;
+                }
+
                 if (res && res.tracks.length) {
                     this.current = res.tracks[0];
                 } else {
-                    // Skip if SoundCloud yields no results
                     console.log(`[MusicPlayer] JIT Resolve failed for ${this.current.title}`);
                     return this.playNext();
                 }
