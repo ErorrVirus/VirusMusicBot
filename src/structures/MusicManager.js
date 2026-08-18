@@ -1,5 +1,7 @@
 const { EventEmitter } = require('events');
 const { Shoukaku, Connectors } = require('shoukaku');
+const { ActivityType } = require('discord.js');
+const { buildNowPlayingEmbed, buildControlRow, buildEmbed } = require('../utils/embedBuilder');
 const MusicPlayer = require('./MusicPlayer');
 const config = require('../config');
 
@@ -33,43 +35,59 @@ class MusicManager extends EventEmitter {
         this.shoukaku.on('disconnect', (name, count) => console.warn(`[Lavalink] Node ${name} disconnected. Reconnecting... (Attempt ${count})`));
         
         // Handle events emitted by MusicPlayer
-        this.on('playerStart', (player, track) => {
+        this.on('playerStart', async (player, track) => {
+            // ── CRITICAL: cancel the idle-disconnect timer whenever a song starts ──
+            if (player.connectionTimeout) {
+                clearTimeout(player.connectionTimeout);
+                player.connectionTimeout = null;
+            }
+
             const channel = this.client.channels.cache.get(player.textId);
             if (!channel) return;
-            const { buildEmbed } = require('../utils/embedBuilder');
-            const { formatTime } = require('../utils/helpers');
-            
-            const embed = buildEmbed({
-                title: '🎶 Now Playing',
-                description: `[**${track.info.title}**](${track.info.uri})`,
-                thumbnail: track.info.artworkUrl || null,
-                fields: [
-                    { name: 'Author', value: track.info.author, inline: true },
-                    { name: 'Duration', value: track.info.isStream ? 'LIVE' : formatTime(track.info.length), inline: true },
-                    { name: 'Requested By', value: `<@${track.requester.id}>`, inline: true }
-                ]
-            });
-            channel.send({ embeds: [embed] }).catch(() => {});
+
+
+            // Set Bot Activity — generic to protect server privacy
+            this.client.user.setActivity('music 🎵', { type: ActivityType.Listening });
+
+            // The embed contains the volume ▰▰▰▱▱ slider bar directly inside a field
+            const embed      = buildNowPlayingEmbed(track, player.volume || 100, this.client.user.displayAvatarURL());
+            // Single row: ⏸/▶ | ⏹ | ⏭ | 🔉 | 🔊
+            const controlRow = buildControlRow(player.isPaused);
+
+            // Store the message so volume changes can live-edit it
+            channel.send({ embeds: [embed], components: [controlRow] })
+                .then(msg => { player.nowPlayingMessage = msg; })
+                .catch(() => {});
         });
 
+
         this.on('playerEmpty', (player) => {
+            // Restore Bot Activity
+            this.client.user.setActivity('ready to play any song', { type: ActivityType.Playing });
+            
             const channel = this.client.channels.cache.get(player.textId);
             if (channel) {
-                const { buildEmbed } = require('../utils/embedBuilder');
                 channel.send({ embeds: [buildEmbed({ description: 'Queue concluded. Disconnecting in 1 minute if no tracks are added.' })] }).catch(() => {});
             }
-            
+
+            if (player.connectionTimeout) clearTimeout(player.connectionTimeout);
             player.connectionTimeout = setTimeout(() => {
                 if (player && !player.current) {
-                    player.destroy();
+                    player.destroy('Idle timeout');
                 }
             }, 60000);
         });
 
         this.on('playerClosed', (player, data) => {
             console.log(`Player closed in guild ${player.guildId}`, data);
-            // Ignore normal disconnects
-            if (data.code === 4014) return;
+            if (data.code === 4014) {
+                const guild = this.client.guilds.cache.get(player.guildId);
+                if (guild && !guild.members.me.voice.channelId) {
+                    console.log(`[MusicManager] 4014 received and bot is not in a voice channel. Destroying player...`);
+                    player.destroy('Disconnected (4014) and no channel ID');
+                }
+                return;
+            }
         });
 
         this.on('playerException', (player, data) => {
@@ -79,6 +97,10 @@ class MusicManager extends EventEmitter {
         this.on('playerStuck', (player, data) => {
             console.warn(`Track stuck in guild ${player.guildId}:`, data);
         });
+
+        // Note: voiceStateUpdate for bot disconnects is handled by events/voiceStateUpdate.js
+        // via the event handler system. A duplicate listener was removed here (H-1) to prevent
+        // player.destroy() from being called twice on the same disconnect event.
     }
 
     async createPlayer(options) {
@@ -109,19 +131,49 @@ class MusicManager extends EventEmitter {
         const node = this.shoukaku.options.nodeResolver(this.shoukaku.nodes);
         if (!node) throw new Error('No Lavalink nodes available');
 
-        const result = await node.rest.resolve(query);
-        if (!result) return null;
-
-        if (result.loadType === 'track' || result.loadType === 'search') {
-            const tracks = result.loadType === 'search' ? [result.data[0]] : [result.data];
-            tracks.forEach(t => t.requester = requester);
-            return { type: result.loadType, tracks, playlistName: null };
-        } else if (result.loadType === 'playlist') {
-            result.data.tracks.forEach(t => t.requester = requester);
-            return { type: 'playlist', tracks: result.data.tracks, playlistName: result.data.info.name };
+        let result;
+        try {
+            result = await node.rest.resolve(query);
+        } catch (err) {
+            console.error('[Resolve] REST error:', err);
+            throw new Error('Failed to contact Lavalink. Is the node online?');
         }
 
-        return null;
+        if (!result) return null;
+
+        console.log(`[Resolve] loadType=${result.loadType} query="${query}"`);
+
+        switch (result.loadType) {
+            case 'track': {
+                const track = result.data;
+                track.requester = requester;
+                return { type: 'track', tracks: [track], playlistName: null };
+            }
+            case 'search': {
+                if (!result.data || !result.data.length) return null;
+                const track = result.data[0];
+                track.requester = requester;
+                return { type: 'search', tracks: [track], playlistName: null };
+            }
+            case 'playlist': {
+                const tracks = result.data.tracks || [];
+                tracks.forEach(t => t.requester = requester);
+                const name = result.data.info?.name || result.data.pluginInfo?.name || 'Unknown Playlist';
+                return { type: 'playlist', tracks, playlistName: name };
+            }
+            case 'empty': {
+                console.warn('[Resolve] Lavalink returned empty result for:', query);
+                return null;
+            }
+            case 'error': {
+                console.error('[Resolve] Lavalink error payload:', JSON.stringify(result, null, 2));
+                throw new Error(result.data?.message || 'Lavalink encountered an error resolving the track.');
+            }
+            default: {
+                console.warn('[Resolve] Unknown loadType:', result.loadType, JSON.stringify(result, null, 2));
+                return null;
+            }
+        }
     }
 }
 

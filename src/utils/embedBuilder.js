@@ -1,30 +1,126 @@
-const { EmbedBuilder } = require('discord.js');
+const {
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
+} = require('discord.js');
+const { buildVolumeBar, buildSliderBar, formatTime } = require('./helpers');
 
 module.exports = {
+    // ── Generic builders ─────────────────────────────────────────────────────
     buildEmbed: (options) => {
-        const embed = new EmbedBuilder()
-            .setColor(options.color || '#2b2d31');
-
-        if (options.title) embed.setTitle(options.title);
+        const embed = new EmbedBuilder().setColor(options.color || '#2b2d31');
+        if (options.title)       embed.setTitle(options.title);
         if (options.description) embed.setDescription(options.description);
-        if (options.thumbnail) embed.setThumbnail(options.thumbnail);
-        if (options.image) embed.setImage(options.image);
-        if (options.author) embed.setAuthor({ name: options.author.name, iconURL: options.author.iconURL });
-        if (options.footer) embed.setFooter({ text: options.footer.text, iconURL: options.footer.iconURL });
-        if (options.fields) embed.addFields(options.fields);
-
+        if (options.thumbnail)   embed.setThumbnail(options.thumbnail);
+        if (options.image)       embed.setImage(options.image);
+        if (options.author)      embed.setAuthor({ name: options.author.name, iconURL: options.author.iconURL });
+        if (options.footer)      embed.setFooter({ text: options.footer.text, iconURL: options.footer.iconURL });
+        if (options.fields)      embed.addFields(options.fields);
         return embed;
     },
-    
-    errorEmbed: (message) => {
+
+    errorEmbed: (message) =>
+        new EmbedBuilder().setColor('#ed4245').setDescription(`❌ | ${message}`),
+
+    successEmbed: (message) =>
+        new EmbedBuilder().setColor('#57f287').setDescription(`✅ | ${message}`),
+
+    // ── Now Playing embed ────────────────────────────────────────────────────
+    /**
+     * Builds the rich Now Playing embed with the volume slider bar embedded
+     * directly inside a field — so it lives *inside* the card, not below it.
+     *
+     * @param {object} track          Shoukaku track object
+     * @param {number} volume         Current player volume (1–200)
+     * @param {string} clientAvatarURL Bot avatar URL for the footer
+     */
+    buildNowPlayingEmbed: (track, volume, clientAvatarURL) => {
+        const { icon, label } = buildVolumeBar(volume);
+        const slider = buildSliderBar(volume);
+
         return new EmbedBuilder()
-            .setColor('#ed4245')
-            .setDescription(`❌ | ${message}`);
+            .setColor('#5539CC')
+            .setAuthor({
+                name: 'Now Playing',
+                iconURL: 'https://cdn.discordapp.com/emojis/1105021295240560700.gif'
+            })
+            .setTitle(track.info.title)
+            .setURL(track.info.uri)
+            .setThumbnail(
+                track.info.artworkUrl ||
+                'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?q=80&w=200&auto=format&fit=crop'
+            )
+            .addFields(
+                { name: '👤  Author',       value: `\`${track.info.author}\``,                                           inline: true },
+                { name: '⏱  Duration',     value: `\`${track.info.isStream ? '🔴 LIVE' : formatTime(track.info.length)}\``, inline: true },
+                { name: '🎧  Requested By', value: `<@${track.requester?.id || 'unknown'}>`,                             inline: true },
+                // Volume slider — formatted exactly like: 🔊 ▰▰▰▰▰▱▱▱ 50%
+                {
+                    name:   `Volume  ·  ${label}`,
+                    value:  `${icon}  ${slider}  ${volume}%`,
+                    inline: false
+                }
+            )
+            .setFooter({ text: '✦  Coded by ErorrVirus', iconURL: clientAvatarURL });
     },
 
-    successEmbed: (message) => {
+    // ── Single playback + volume control row (5 buttons max in Discord) ───────
+    /**
+     * One clean row with all 5 controls:
+     * ⏸/▶ Pause  |  ⏹ Stop  |  ⏭ Skip  |  🔉 Vol Down  |  🔊 Vol Up
+     *
+     * @param {boolean} isPaused
+     * @returns {ActionRowBuilder}
+     */
+    buildControlRow: (isPaused = false) => {
+        return new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('music_pause')
+                .setEmoji(isPaused ? '▶️' : '⏸️')
+                .setStyle(isPaused ? ButtonStyle.Success : ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId('music_stop')
+                .setEmoji('⏹️')
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId('music_skip')
+                .setEmoji('⏭')
+                .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+                .setCustomId('music_voldown')
+                .setEmoji('🔉')
+                .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+                .setCustomId('music_volup')
+                .setEmoji('🔊')
+                .setStyle(ButtonStyle.Secondary)
+        );
+    },
+
+    // ── Volume confirmation reply ────────────────────────────────────────────
+    /**
+     * Builds the ephemeral volume-change confirmation embed.
+     * Extracted from D-2 — was copy-pasted identically for voldown and volup.
+     *
+     * @param {number} volume      Current player volume (1–200)
+     * @param {'Increased'|'Decreased'} direction
+     * @param {object} user        Discord user object (for footer)
+     * @returns {EmbedBuilder}
+     */
+    buildVolumeReplyEmbed: (volume, direction, user) => {
+        const { bar, color, label, icon } = buildVolumeBar(volume);
+        const slider = buildSliderBar(volume);
         return new EmbedBuilder()
-            .setColor('#57f287')
-            .setDescription(`✅ | ${message}`);
+            .setColor(color)
+            .setAuthor({ name: 'Volume Updated' })
+            .setDescription(
+                `\`\`\`\n${icon}  ${slider}  ${volume}%\n\`\`\`` +
+                `**${label}**`
+            )
+            .setFooter({
+                text:    `${direction} by ${user.username}`,
+                iconURL: user.displayAvatarURL()
+            });
     }
 };

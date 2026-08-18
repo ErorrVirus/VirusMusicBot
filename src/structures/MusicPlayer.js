@@ -22,6 +22,9 @@ class MusicPlayer {
         this.volume = 100;
         this.isPaused = false;
         
+        // Reference to the Now Playing message so we can live-edit the volume bar
+        this.nowPlayingMessage = null;
+        
         this.connectionTimeout = null;
     }
 
@@ -61,16 +64,40 @@ class MusicPlayer {
             this.current = this.queue.shift();
         }
 
+        // Just-In-Time (JIT) Resolving for Spotify bypass
+        if (this.current.isUnresolved) {
+            try {
+                const res = await this.manager.resolve(`ytsearch:${this.current.title} ${this.current.artist} audio`, this.current.requester);
+                if (res && res.tracks.length) {
+                    this.current = res.tracks[0];
+                } else {
+                    // Skip if YouTube yields no results
+                    console.log(`[MusicPlayer] JIT Resolve failed for ${this.current.title}`);
+                    return this.playNext();
+                }
+            } catch (err) {
+                console.error('[MusicPlayer] JIT Resolve Error:', err.message);
+                return this.playNext();
+            }
+        }
+
         try {
             await this.player.playTrack({ track: { encoded: this.current.encoded } });
-            await this.player.setGlobalVolume(this.volume);
+            // Only restore volume if it's not the default (100).
+            // We intentionally do NOT call setGlobalVolume here on every track start
+            // because that triggers a Lavalink filter update during audio buffer
+            // initialization, causing a race condition that manifests as startup stutter.
+            // Lavalink remembers the player's volume across tracks on the same session.
+            if (this.volume !== 100) {
+                await this.player.setGlobalVolume(this.volume);
+            }
         } catch (error) {
             console.error('Failed to play track', error);
             this.playNext();
         }
     }
 
-    playNext() {
+    async playNext() {
         if (this.current) {
             if (this.loop === 'track') {
                 this.queue.unshift(this.current);
@@ -89,7 +116,7 @@ class MusicPlayer {
             return;
         }
 
-        this.play();
+        await this.play();
     }
 
     playPrevious() {
@@ -104,12 +131,24 @@ class MusicPlayer {
         return true;
     }
 
-    destroy() {
+    destroy(reason = 'Unknown') {
+        console.log(`[MusicPlayer] Destroying player for guild ${this.guildId}. Reason: ${reason}`);
         if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
         this.queue = [];
         this.previous = [];
         this.current = null;
-        if (this.player) this.manager.shoukaku.leaveVoiceChannel(this.guildId);
+        
+        if (this.player) {
+            try {
+                this.player.setPaused(true);
+                this.player.stopTrack();
+                this.player.removeAllListeners();
+            } catch (err) {
+                console.warn('[MusicPlayer] Non-fatal error during player teardown:', err.message);
+            }
+            this.manager.shoukaku.leaveVoiceChannel(this.guildId);
+        }
+        
         this.manager.players.delete(this.guildId);
     }
 }

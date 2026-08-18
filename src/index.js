@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 const MusicManager = require('./structures/MusicManager');

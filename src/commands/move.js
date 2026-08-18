@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
+const { successEmbed } = require('../utils/embedBuilder');
+const { validatePlayerConnection } = require('../utils/helpers');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -18,12 +19,8 @@ module.exports = {
                 .setMinValue(1)
         ),
     async execute(interaction, client) {
-        const player = client.manager.getPlayer(interaction.guild.id);
-        if (!player || !player.current) return interaction.reply({ embeds: [errorEmbed('I am not playing anything.')], ephemeral: true });
-
-        if (interaction.member.voice.channelId !== player.voiceId) {
-            return interaction.reply({ embeds: [errorEmbed('You must be in my voice channel to use this command.')], ephemeral: true });
-        }
+        const { player, error } = validatePlayerConnection(interaction, client);
+        if (error) return interaction.reply(error);
 
         const from = interaction.options.getInteger('from');
         const to = interaction.options.getInteger('to');
@@ -34,7 +31,9 @@ module.exports = {
 
         const [moved] = player.queue.splice(from - 1, 1);
         player.queue.splice(to - 1, 0, moved);
-        
-        interaction.reply({ embeds: [successEmbed(`Moved **${moved.info.title}** to position **${to}**.`)] });
+
+        // H-4: isUnresolved Spotify tracks don't have .info yet (JIT resolve pending)
+        const trackName = moved.info?.title ?? moved.title ?? 'Unknown track';
+        interaction.reply({ embeds: [successEmbed(`Moved **${trackName}** to position **${to}**.`)] });
     }
 };

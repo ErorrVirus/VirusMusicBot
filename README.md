@@ -23,4 +23,4 @@ docker compose up -d --build
 See the `.env.example` file for a list of all required environment variables.
 
 ## Support
-Built by Antigravity for ErorrVirus. 🚀
+Built by ErorrVirus. 🚀
