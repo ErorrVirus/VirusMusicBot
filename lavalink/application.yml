@@ -17,13 +17,20 @@ plugins:
       - ANDROID_MUSIC
       - IOS
       - MWEB
-      - TVHTML5EMBEDDED
+      - WEB
+      - MUSIC
+      - TV
     clientOptions:
       WEB:
-        playback: false
-        searching: false
-        playlistLoading: false
-        videoLoading: false
+        playback: true
+        playlistLoading: true
+        searching: true
+        videoLoading: true
+      MUSIC:
+        playback: true
+        playlistLoading: true
+        searching: true
+        videoLoading: true
   lavasrc:
     providers:
       - 'ytsearch:"%ISRC%"'
