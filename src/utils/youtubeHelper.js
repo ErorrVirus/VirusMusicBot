@@ -18,11 +18,20 @@ async function getYouTubePlaylistTracks(url) {
 
 async function getYouTubeSingleTrack(url) {
     try {
-        const video = await YouTube.getVideo(url);
-        if (!video) return null;
+        // Use noembed API to bypass IP blocks for single videos
+        const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        
+        if (!data || data.error) {
+            // Fallback to youtube-sr if noembed fails
+            const video = await YouTube.getVideo(url);
+            if (!video) return null;
+            return { name: video.title, artist: video.channel?.name || '' };
+        }
+        
         return {
-            name: video.title,
-            artist: video.channel?.name || ''
+            name: data.title,
+            artist: data.author_name || ''
         };
     } catch (err) {
         console.error('[YouTubeHelper] Error fetching video:', err);

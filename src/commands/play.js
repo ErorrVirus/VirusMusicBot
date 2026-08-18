@@ -145,7 +145,7 @@ module.exports = {
                 const tracks = await getYouTubePlaylistTracks(query);
 
                 if (!tracks.length) {
-                    return interaction.editReply({ embeds: [errorEmbed('Could not load the YouTube playlist. Make sure it is public!')] });
+                    return interaction.editReply({ embeds: [errorEmbed('Could not load the YouTube playlist. Due to YouTube blocking your server, YouTube playlists cannot be parsed. Please use a **Spotify playlist** instead!')] });
                 }
 
                 for (const t of tracks) {
