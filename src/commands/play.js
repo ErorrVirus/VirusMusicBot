@@ -1,11 +1,12 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed, buildEmbed } = require('../utils/embedBuilder');
 const { getPlaylistTracks, getAlbumTracks, getArtistTracks, getSingleTrack, toSearchQuery } = require('../utils/spotifyHelper');
-const { getYouTubeSingleTrack } = require('../utils/youtubeHelper');
+const { getYouTubeSingleTrack, getYouTubePlaylistTracks } = require('../utils/youtubeHelper');
 const LOCALE_REGEX = /spotify\.com\/[a-zA-Z]{2}(?:-[a-zA-Z0-9]+)?\//;
 const SPOTIFY_URL = /spotify\.com\//;
 const URL_REGEX = /^https?:\/\//;
-const YOUTUBE_VIDEO = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/;
+const YOUTUBE_PLAYLIST = /(?:youtube\.com\/playlist\?list=|youtube\.com\/watch\?.*list=)([A-Za-z0-9_-]+)/;
+const YOUTUBE_VIDEO    = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/;
 
 const SPOTIFY_PLAYLIST = /open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/;
 const SPOTIFY_ALBUM    = /open\.spotify\.com\/album\/([A-Za-z0-9]+)/;
@@ -141,6 +142,31 @@ module.exports = {
             return interaction.editReply({ embeds: [errorEmbed('"Liked Songs" and private user collections cannot be loaded because Spotify does not allow external apps to read them. Please share a **public playlist** instead!')] });
         }
 
+        // ── YOUTUBE PLAYLIST ──────────────────────────────────────────────────
+        if (YOUTUBE_PLAYLIST.test(query)) {
+            try {
+                const player = await getPlayer();
+                await interaction.editReply({ embeds: [buildEmbed({ description: '🔍 Fetching playlist from YouTube...' })] });
+
+                const tracks = await getYouTubePlaylistTracks(query);
+
+                if (!tracks.length) {
+                    return interaction.editReply({ embeds: [errorEmbed('Could not load the YouTube playlist. Make sure it is **public** or unlisted!')] });
+                }
+
+                for (const t of tracks) {
+                    t.requester = interaction.user;
+                    player.queue.push(t);
+                }
+                interaction.editReply({ embeds: [successEmbed(`📋 Added **${tracks.length}** tracks from YouTube playlist to the queue.`)] });
+                if (!player.current) player.playNext();
+            } catch (err) {
+                console.error('[Play] YouTube playlist error:', err);
+                interaction.editReply({ embeds: [errorEmbed(`Failed to load playlist:\n\`${err.message}\``)] });
+            }
+            return;
+        }
+
         // ── SINGLE SPOTIFY TRACK / YOUTUBE / SEARCH ───────────────────────────
         try {
             const player = await getPlayer();
@@ -148,27 +174,27 @@ module.exports = {
             let resolveQuery = query;
 
             if (SPOTIFY_URL.test(query)) {
-                // Spotify track → convert to ytsearch to bypass LavaSrc TCP timeout
+                // Spotify track → convert to scsearch
                 const trackMatch = query.match(SPOTIFY_TRACK);
                 if (trackMatch) {
                     try {
                         const data = await getSingleTrack(trackMatch[1]);
                         if (data && data.name) {
-                            resolveQuery = `ytsearch:${data.name} ${data.artist} audio`;
+                            resolveQuery = `scsearch:${data.name} ${data.artist}`;
                         } else {
-                            resolveQuery = query;
+                            resolveQuery = `scsearch:${query}`;
                         }
                     } catch {
-                        resolveQuery = query;
+                        resolveQuery = `scsearch:${query}`;
                     }
                 }
             } else if (YOUTUBE_VIDEO.test(query)) {
-                // YouTube video URL → fetch title via noembed, then ytsearch
+                // YouTube video URL → fetch title via noembed, then scsearch
                 try {
                     const video = await getYouTubeSingleTrack(query);
                     if (video && video.name) {
-                        resolveQuery = `ytsearch:${video.name} ${video.artist} audio`;
-                        console.log(`[Play] YouTube URL converted to ytsearch: ${resolveQuery}`);
+                        resolveQuery = `scsearch:${video.name} ${video.artist}`;
+                        console.log(`[Play] YouTube URL converted to scsearch: ${resolveQuery}`);
                     } else {
                         return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info. Make sure the video is public and not age-restricted.')] });
                     }
@@ -177,10 +203,9 @@ module.exports = {
                     return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info.')] });
                 }
             } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
-                // Unsupported YouTube URL type (e.g. live, shorts without video ID)
                 return interaction.editReply({ embeds: [errorEmbed('Unsupported YouTube link. Please send a direct video link like `youtube.com/watch?v=...`')] });
             } else if (!URL_REGEX.test(query)) {
-                resolveQuery = `ytsearch:${query}`; // Plain text search
+                resolveQuery = `scsearch:${query}`; // Plain text search via SoundCloud
             }
 
             const result = await client.manager.resolve(resolveQuery, interaction.user);
