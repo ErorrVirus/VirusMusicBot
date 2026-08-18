@@ -153,7 +153,7 @@ module.exports = {
                     try {
                         const data = await getSingleTrack(trackMatch[1]);
                         if (data && data.name) {
-                            resolveQuery = `ytsearch:${data.name} ${data.artist} audio`;
+                            resolveQuery = `scsearch:${data.name} ${data.artist}`;
                         } else {
                             resolveQuery = query;
                         }
@@ -162,7 +162,7 @@ module.exports = {
                     }
                 }
             } else if (!URL_REGEX.test(query)) {
-                resolveQuery = `ytsearch:${query}`; // Plain text search
+                resolveQuery = `scsearch:${query}`; // Plain text search
             }
 
             const result = await client.manager.resolve(resolveQuery, interaction.user);
