@@ -48,7 +48,6 @@ class MusicPlayer {
 
         this.player.on('exception', (data) => {
             this.manager.emit('playerException', this, data);
-            this.playNext();
         });
 
         this.player.on('stuck', (data) => {
