@@ -184,8 +184,8 @@ module.exports = {
 
         } catch (err) {
             console.error('[Play] Error:', err);
-            const msg = err.message || 'Something went wrong while looking up the track.';
-            interaction.editReply({ embeds: [errorEmbed(`An error occurred while trying to play the track:\n\`${msg}\``)] });
+            const msg = err.stack ? err.stack.substring(0, 1000) : (err.message || JSON.stringify(err) || 'Unknown error');
+            interaction.editReply({ embeds: [errorEmbed(`An error occurred while trying to play the track:\n\`\`\`\n${msg}\n\`\`\``)] });
         }
     }
 };
