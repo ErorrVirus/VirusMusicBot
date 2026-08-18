@@ -1,0 +1,19 @@
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env.production
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Lavalink plugins cache (auto-downloaded)
+lavalink/plugins/

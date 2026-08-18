@@ -57,6 +57,7 @@ services:
       - LAVALINK_PLUGINS_1_DEPENDENCY=com.github.topi314.lavasrc:lavasrc-plugin:4.8.3
       - LAVALINK_PLUGINS_1_REPOSITORY=https://maven.lavalink.dev/releases
       - PLUGINS_YOUTUBE_ENABLED=true
+      - PLUGINS_YOUTUBE_OAUTH_ENABLED=true
       - PLUGINS_YOUTUBE_ALLOWSEARCH=true
       - PLUGINS_YOUTUBE_ALLOWDIRECTVIDEOIDS=true
       - PLUGINS_YOUTUBE_ALLOWDIRECTPLAYLISTIDS=true

@@ -9,11 +9,12 @@ module.exports = {
     lavalink: {
         name: 'Primary Node',
         url: `${process.env.LAVALINK_HOST || 'localhost'}:${process.env.LAVALINK_PORT || 2333}`,
-        auth: process.env.LAVALINK_PASSWORD || 'youshallnotpass',
+        auth: process.env.LAVALINK_PASSWORD,
         secure: false
     },
     validate() {
         if (!this.discord.token) throw new Error('DISCORD_TOKEN is missing from environment variables.');
         if (!this.discord.clientId) throw new Error('CLIENT_ID is missing from environment variables.');
+        if (!process.env.LAVALINK_PASSWORD) throw new Error('LAVALINK_PASSWORD is missing from environment variables.');
     }
 };
