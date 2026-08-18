@@ -26,9 +26,14 @@ module.exports = {
             }
         }
 
+        const currentTitle = player.current?.info?.title ?? player.current?.title ?? 'Unknown Track';
+        const currentUri = player.current?.info?.uri ?? '';
+        const currentLength = player.current?.info?.length ? ` \`[${formatTime(player.current.info.length)}]\`` : '';
+        const currentStr = currentUri ? `[${currentTitle}](${currentUri})${currentLength}` : `${currentTitle}${currentLength}`;
+
         const embed = buildEmbed({
             title: `Queue for ${interaction.guild.name}`,
-            description: `**Now Playing:**\n[${player.current.info.title}](${player.current.info.uri}) \`[${formatTime(player.current.info.length)}]\`\n\n**Up Next:**\n${queueStr}`,
+            description: `**Now Playing:**\n${currentStr}\n\n**Up Next:**\n${queueStr}`,
             footer: { text: `Total tracks: ${player.queue.length} | Loop: ${player.loop}` }
         });
 
