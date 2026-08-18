@@ -9,7 +9,7 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     oauth:
-      enabled: true
+      enabled: false
       skipInitialization: false
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
     clients:
