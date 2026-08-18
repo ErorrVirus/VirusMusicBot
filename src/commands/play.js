@@ -2,16 +2,16 @@ const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed, buildEmbed } = require('../utils/embedBuilder');
 const { getPlaylistTracks, getAlbumTracks, getArtistTracks, getSingleTrack, toSearchQuery } = require('../utils/spotifyHelper');
 const { getYouTubeSingleTrack, getYouTubePlaylistTracks } = require('../utils/youtubeHelper');
-const LOCALE_REGEX = /spotify\.com\/[a-zA-Z]{2}(?:-[a-zA-Z0-9]+)?\//;
-const SPOTIFY_URL = /spotify\.com\//;
-const URL_REGEX = /^https?:\/\//;
-const YOUTUBE_PLAYLIST = /(?:youtube\.com\/playlist\?list=|youtube\.com\/watch\?.*list=)([A-Za-z0-9_-]+)/;
-const YOUTUBE_VIDEO    = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/;
 
-const SPOTIFY_PLAYLIST = /open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/;
-const SPOTIFY_ALBUM    = /open\.spotify\.com\/album\/([A-Za-z0-9]+)/;
-const SPOTIFY_ARTIST   = /open\.spotify\.com\/artist\/([A-Za-z0-9]+)/;
-const SPOTIFY_TRACK    = /open\.spotify\.com\/track\/([A-Za-z0-9]+)/;
+const SPOTIFY_URL      = /spotify\.com\//;
+const URL_REGEX        = /^https?:\/\//;
+const SPOTIFY_PLAYLIST = /spotify\.com\/(?:[a-zA-Z0-9_-]+\/)?playlist\/([A-Za-z0-9]+)/;
+const SPOTIFY_ALBUM    = /spotify\.com\/(?:[a-zA-Z0-9_-]+\/)?album\/([A-Za-z0-9]+)/;
+const SPOTIFY_ARTIST   = /spotify\.com\/(?:[a-zA-Z0-9_-]+\/)?artist\/([A-Za-z0-9]+)/;
+const SPOTIFY_TRACK    = /spotify\.com\/(?:[a-zA-Z0-9_-]+\/)?track\/([A-Za-z0-9]+)/;
+
+const YOUTUBE_PLAYLIST = /(?:youtube\.com\/(?:playlist\?list=|watch\?.*list=))([A-Za-z0-9_-]+)/;
+const YOUTUBE_VIDEO    = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]+)/;
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -54,11 +54,6 @@ module.exports = {
             }
             return player;
         };
-
-        // Clean localized URLs
-        if (SPOTIFY_URL.test(query) && LOCALE_REGEX.test(query)) {
-            query = query.replace(LOCALE_REGEX, 'spotify.com/');
-        }
 
         // ── SPOTIFY PLAYLIST ──────────────────────────────────────────────────
         const playlistMatch = query.match(SPOTIFY_PLAYLIST);
@@ -135,8 +130,6 @@ module.exports = {
             return;
         }
 
-
-
         // ── UNSUPPORTED SPOTIFY LINKS (Liked Songs, etc.) ─────────────────────
         if (query.includes('spotify.com/collection') || query.includes('spotify.com/user')) {
             return interaction.editReply({ embeds: [errorEmbed('"Liked Songs" and private user collections cannot be loaded because Spotify does not allow external apps to read them. Please share a **public playlist** instead!')] });
@@ -181,12 +174,15 @@ module.exports = {
                         const data = await getSingleTrack(trackMatch[1]);
                         if (data && data.name) {
                             resolveQuery = `scsearch:${data.name} ${data.artist}`;
+                            console.log(`[Play] Spotify URL converted to scsearch: ${resolveQuery}`);
                         } else {
-                            resolveQuery = `scsearch:${query}`;
+                            return interaction.editReply({ embeds: [errorEmbed('Could not fetch Spotify track info. Please make sure the link is valid or search by song name.')] });
                         }
-                    } catch {
-                        resolveQuery = `scsearch:${query}`;
+                    } catch (e) {
+                        return interaction.editReply({ embeds: [errorEmbed(`Failed to load Spotify track: ${e.message}`)] });
                     }
+                } else {
+                    return interaction.editReply({ embeds: [errorEmbed('Unsupported or unrecognized Spotify link format.')] });
                 }
             } else if (YOUTUBE_VIDEO.test(query)) {
                 // YouTube video URL → fetch title via noembed, then scsearch
