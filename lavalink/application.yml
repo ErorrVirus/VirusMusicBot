@@ -39,9 +39,9 @@ plugins:
 
 lavalink:
   plugins:
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.2"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.25.3"
       repository: "https://maven.lavalink.dev/releases"
-    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.8.3"
+    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.14.1"
       repository: "https://maven.lavalink.dev/releases"
   server:
     password: ${LAVALINK_PASSWORD}
