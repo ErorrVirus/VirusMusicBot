@@ -68,6 +68,12 @@ lavalink:
       vimeo: true
       http: true
       local: false
+    bufferDurationMs: 1000
+    frameBufferDurationMs: 5000
+    opusEncodingQuality: 10
+    resamplingQuality: HIGH
+    trackStuckThresholdMs: 10000
+    useSeekGhosting: true
     filters:
       volume: true
       equalizer: true
@@ -79,10 +85,7 @@ lavalink:
       rotation: true
       channelMix: true
       lowPass: true
-    # nonAllocating uses stack-allocated audio frames instead of heap-allocated
-    # ones. This dramatically reduces GC pressure, eliminating the random
-    # mid-playback stutters caused by JVM GC pauses on lower-end hardware.
-    nonAllocating: true
+    nonAllocating: false
 
 metrics:
   prometheus:
