@@ -294,7 +294,7 @@ async function getSingleTrack(trackId) {
 
 function toSearchQuery(track) {
     const artist = track.artist || '';
-    return `ytsearch:${track.name} ${artist} audio`;
+    return `scsearch:${track.name} ${artist}`;
 }
 
 module.exports = { getPlaylistTracks, getAlbumTracks, getArtistTracks, getSingleTrack, toSearchQuery };
