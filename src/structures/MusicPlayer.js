@@ -38,8 +38,25 @@ class MusicPlayer {
         });
 
         this.player.on('start', () => this.manager.emit('playerStart', this, this.current));
-        this.player.on('end', (data) => {
+        this.player.on('end', async (data) => {
             if (data.reason === 'replaced') return;
+            if (data.reason === 'loadFailed' && this.current && !this.current._fallbackTried) {
+                this.current._fallbackTried = true;
+                const title = this.current.info?.title || this.current.title || '';
+                const author = this.current.info?.author || this.current.artist || '';
+                console.log(`[MusicPlayer] Track failed on YouTube (loadFailed). Trying seamless fallback for "${title}"...`);
+                try {
+                    const fallbackRes = await this.manager.resolve(`scsearch:${title} ${author}`.trim(), this.current.requester);
+                    if (fallbackRes && fallbackRes.tracks.length) {
+                        this.current = fallbackRes.tracks[0];
+                        this.current._fallbackTried = true;
+                        await this.player.playTrack({ track: { encoded: this.current.encoded } });
+                        return;
+                    }
+                } catch (e) {
+                    console.error('[MusicPlayer] Fallback attempt error:', e.message);
+                }
+            }
             this.playNext();
         });
         
