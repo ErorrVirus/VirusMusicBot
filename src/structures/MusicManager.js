@@ -172,9 +172,13 @@ class MusicManager extends EventEmitter {
             }
             case 'search': {
                 if (!result.data || !result.data.length) return null;
-                // Filter out 30-40 second preview snippets (like SoundCloud Go+ previews) when full tracks exist
-                const fullTracks = result.data.filter(t => !t.info?.uri?.includes('/preview/') && (!t.info?.length || t.info.length > 50000));
-                const track = fullTracks.length ? fullTracks[0] : result.data[0];
+                // Discard 30-second preview snippets completely so we NEVER play snippets
+                const fullTracks = result.data.filter(t => !t.info?.uri?.includes('/preview/') && (!t.info?.length || t.info.length > 55000));
+                if (!fullTracks.length) {
+                    console.warn(`[Resolve] Search returned only 30s preview snippets (${query}). Rejecting snippet.`);
+                    return null;
+                }
+                const track = fullTracks[0];
                 track.requester = requester;
                 return { type: 'search', tracks: [track], playlistName: null };
             }

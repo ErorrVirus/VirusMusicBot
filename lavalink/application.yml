@@ -12,28 +12,36 @@ plugins:
       url: "http://virusmusicbot_yt_cipher:8001"
     oauth:
       enabled: true
-      skipInitialization: false
+      skipInitialization: true
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
     clients:
-      - TVHTML5EMBEDDED
-      - MUSIC
       - ANDROID_VR
       - ANDROID_MUSIC
+      - MUSIC
+      - TVHTML5EMBEDDED
       - WEB
-      - IOS
-      - MWEB
     clientOptions:
+      ANDROID_VR:
+        playback: true
+        playlistLoading: true
+        searching: true
+        videoLoading: true
+      ANDROID_MUSIC:
+        playback: true
+        playlistLoading: true
+        searching: true
+        videoLoading: true
+      MUSIC:
+        playback: true
+        playlistLoading: true
+        searching: true
+        videoLoading: true
       TVHTML5EMBEDDED:
         playback: true
         playlistLoading: true
         searching: true
         videoLoading: true
       WEB:
-        playback: true
-        playlistLoading: true
-        searching: true
-        videoLoading: true
-      MUSIC:
         playback: true
         playlistLoading: true
         searching: true
