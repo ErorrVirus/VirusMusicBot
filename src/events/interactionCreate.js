@@ -61,7 +61,7 @@ module.exports = {
                     }
 
                     case 'music_stop': {
-                        player.destroy('Stop button pressed');
+                        player.stop();
                         return interaction.reply({ content: '⏹️  Stopped the music and cleared the queue.', ephemeral: true });
                     }
 

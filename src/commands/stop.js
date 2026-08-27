@@ -10,8 +10,7 @@ module.exports = {
         const { player, error } = validatePlayerConnection(interaction, client);
         if (error) return interaction.reply(error);
 
-        player.queue = [];
-        player.player.stopTrack();
-        interaction.reply({ embeds: [successEmbed('Stopped music and cleared the queue.')] });
+        player.stop();
+        interaction.reply({ embeds: [successEmbed('⏹️ Stopped music and cleared the queue.')] });
     }
 };

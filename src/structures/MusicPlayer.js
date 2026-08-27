@@ -27,6 +27,7 @@ class MusicPlayer {
         this.nowPlayingMessage = null;
         
         this.connectionTimeout = null;
+        this.isNewConnection = true;
     }
 
     async connect(retries = 2) {
@@ -43,6 +44,7 @@ class MusicPlayer {
                 shardId: 0,
                 deaf: true
             });
+            this.isNewConnection = true;
         } catch (err) {
             console.error(`[MusicPlayer] Voice connection error: ${err.message}`);
             if (retries > 0) {
@@ -146,6 +148,12 @@ class MusicPlayer {
         }
 
         try {
+            // Give Discord Voice UDP socket & DAVE encryption handshake 600ms to stabilize on fresh joins
+            if (this.isNewConnection) {
+                this.isNewConnection = false;
+                await new Promise(r => setTimeout(r, 600));
+            }
+
             await this.player.playTrack({ track: { encoded: this.current.encoded } });
             // Only restore volume if it's not the default (100).
             // We intentionally do NOT call setGlobalVolume here on every track start
@@ -159,6 +167,25 @@ class MusicPlayer {
             console.error('Failed to play track', error);
             this.playNext();
         }
+    }
+
+    stop() {
+        if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
+        this.queue = [];
+        this.current = null;
+        
+        if (this.nowPlayingMessage) {
+            this.nowPlayingMessage.delete().catch(() => {});
+            this.nowPlayingMessage = null;
+        }
+
+        if (this.player) {
+            try {
+                this.player.stopTrack();
+            } catch (_) {}
+        }
+
+        this.manager.emit('playerEmpty', this);
     }
 
     async playNext() {
