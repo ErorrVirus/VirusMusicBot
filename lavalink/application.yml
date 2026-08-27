@@ -15,14 +15,19 @@ plugins:
       skipInitialization: false
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
     clients:
+      - TVHTML5EMBEDDED
       - MUSIC
       - ANDROID_VR
       - ANDROID_MUSIC
       - WEB
-      - TVHTML5EMBEDDED
       - IOS
       - MWEB
     clientOptions:
+      TVHTML5EMBEDDED:
+        playback: true
+        playlistLoading: true
+        searching: true
+        videoLoading: true
       WEB:
         playback: true
         playlistLoading: true
