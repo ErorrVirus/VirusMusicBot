@@ -32,29 +32,19 @@ function buildSearchQueries(title, artist = '', primaryPrefix = 'scsearch:') {
     const base = baseTitle(title);
     const queries = [];
 
-    // 1. YouTube cleaned title + artist
-    if (artist && cleaned && !cleaned.toLowerCase().includes(artist.toLowerCase())) {
-        queries.push(`${primaryPrefix}${cleaned} ${artist}`.trim());
-    }
-
-    // 2. YouTube base title + artist
-    if (artist && base && !base.toLowerCase().includes(artist.toLowerCase())) {
-        queries.push(`${primaryPrefix}${base} ${artist}`.trim());
-    }
-
-    // 3. YouTube cleaned title alone
+    // 1. Cleaned title alone (e.g. "Moscow X Kay Tawahin")
     if (cleaned) {
         queries.push(`${primaryPrefix}${cleaned}`);
     }
 
-    // 4. YouTube raw title + artist
-    if (artist) {
-        queries.push(`${primaryPrefix}${title} ${artist}`.trim());
+    // 2. Cleaned title + artist
+    if (artist && cleaned && !cleaned.toLowerCase().includes(artist.toLowerCase())) {
+        queries.push(`${primaryPrefix}${cleaned} ${artist}`.trim());
     }
 
-    // 5. Fallback to scsearch (SoundCloud) in case YouTube fails
-    if (cleaned) {
-        queries.push(`scsearch:${cleaned}`);
+    // 3. Base title + artist
+    if (artist && base && !base.toLowerCase().includes(artist.toLowerCase())) {
+        queries.push(`${primaryPrefix}${base} ${artist}`.trim());
     }
 
     return [...new Set(queries.map(q => q.trim()).filter(Boolean))];
