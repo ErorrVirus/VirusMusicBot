@@ -9,7 +9,7 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     remoteCipher:
-      url: "https://cipher.kikkia.dev/"
+      url: "http://virusmusicbot_yt_cipher:8001"
     oauth:
       enabled: true
       skipInitialization: false

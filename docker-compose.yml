@@ -44,11 +44,22 @@ services:
       - SSL_CRT_PATH=${SSL_CRT_PATH}
       - SSL_KEY_PATH=${SSL_KEY_PATH}
 
+  yt-cipher:
+    image: ghcr.io/kikkia/yt-cipher:master
+    container_name: virusmusicbot_yt_cipher
+    restart: unless-stopped
+    networks:
+      - virusmusicbot_net
+    environment:
+      - OVERRIDE_SCRIPT_VARIANT=IAS
+
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4.2.2
     container_name: virusmusicbot_lavalink
     user: "root"
     restart: unless-stopped
+    depends_on:
+      - yt-cipher
     networks:
       - virusmusicbot_net
     dns:
