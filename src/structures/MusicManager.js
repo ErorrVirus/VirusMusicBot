@@ -44,9 +44,11 @@ class MusicManager extends EventEmitter {
                 player.connectionTimeout = null;
             }
 
-            const channel = this.client.channels.cache.get(player.textId);
-            if (!channel) return;
-
+            // Delete old Now Playing embed so there is never a duplicate on screen
+            if (player.nowPlayingMessage) {
+                player.nowPlayingMessage.delete().catch(() => {});
+                player.nowPlayingMessage = null;
+            }
 
             // Set Bot Activity — generic to protect server privacy
             this.client.user.setActivity('music 🎵', { type: ActivityType.Listening });
@@ -55,9 +57,8 @@ class MusicManager extends EventEmitter {
                 const embed      = buildNowPlayingEmbed(track, player.volume || 100, this.client.user.displayAvatarURL());
                 const controlRow = buildControlRow(player.isPaused);
 
-                channel.send({ embeds: [embed], components: [controlRow] })
-                    .then(msg => { player.nowPlayingMessage = msg; })
-                    .catch(() => {});
+                const msg = await channel.send({ embeds: [embed], components: [controlRow] });
+                player.nowPlayingMessage = msg;
             } catch (err) {
                 console.error('[MusicManager] Failed to build or send Now Playing embed:', err);
                 channel.send('🎵 Now playing a track, but failed to load track details.').catch(() => {});

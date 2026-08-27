@@ -4,12 +4,12 @@ const { getPlaylistTracks, getAlbumTracks, getArtistTracks, getSingleTrack, toSe
 const { getYouTubeSingleTrack, getYouTubePlaylistTracks } = require('../utils/youtubeHelper');
 const { buildSearchQueries } = require('../utils/searchCleaner');
 
-const SPOTIFY_URL      = /spotify\.com\//;
+const SPOTIFY_URL      = /(?:spotify\.com|spotify\.link|spotify:)/;
 const URL_REGEX        = /^https?:\/\//;
-const SPOTIFY_PLAYLIST = /spotify\.com\/(?:[a-zA-Z0-9_-]+\/)?playlist\/([A-Za-z0-9]+)/;
-const SPOTIFY_ALBUM    = /spotify\.com\/(?:[a-zA-Z0-9_-]+\/)?album\/([A-Za-z0-9]+)/;
-const SPOTIFY_ARTIST   = /spotify\.com\/(?:[a-zA-Z0-9_-]+\/)?artist\/([A-Za-z0-9]+)/;
-const SPOTIFY_TRACK    = /spotify\.com\/(?:[a-zA-Z0-9_-]+\/)?track\/([A-Za-z0-9]+)/;
+const SPOTIFY_PLAYLIST = /(?:open\.spotify\.com\/|spotify:)(?:[a-zA-Z0-9_-]+\/)?playlist[\/:]([A-Za-z0-9]+)/;
+const SPOTIFY_ALBUM    = /(?:open\.spotify\.com\/|spotify:)(?:[a-zA-Z0-9_-]+\/)?album[\/:]([A-Za-z0-9]+)/;
+const SPOTIFY_ARTIST   = /(?:open\.spotify\.com\/|spotify:)(?:[a-zA-Z0-9_-]+\/)?artist[\/:]([A-Za-z0-9]+)/;
+const SPOTIFY_TRACK    = /(?:open\.spotify\.com\/|spotify:)(?:[a-zA-Z0-9_-]+\/)?track[\/:]([A-Za-z0-9]+)/;
 
 const YOUTUBE_PLAYLIST = /(?:youtube\.com\/(?:playlist\?list=|watch\?.*list=))([A-Za-z0-9_-]+)/;
 const YOUTUBE_VIDEO    = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]+)/;
@@ -28,6 +28,16 @@ module.exports = {
         await interaction.deferReply();
 
         let query = interaction.options.getString('query').trim();
+
+        // Follow redirects for spotify.link short links
+        if (query.includes('spotify.link/')) {
+            try {
+                const res = await fetch(query, { redirect: 'follow' });
+                if (res.url && res.url.includes('spotify.com/')) {
+                    query = res.url;
+                }
+            } catch (_) {}
+        }
         const member = interaction.member;
 
         if (!member.voice.channelId) {

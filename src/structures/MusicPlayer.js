@@ -56,6 +56,8 @@ class MusicPlayer {
                     if (fallbackRes && fallbackRes.tracks.length) {
                         this.current = fallbackRes.tracks[0];
                         this.current._fallbackTried = true;
+                        try { await this.player.stopTrack(); } catch (_) {}
+                        await new Promise(r => setTimeout(r, 200));
                         await this.player.playTrack({ track: { encoded: this.current.encoded } });
                         return;
                     }
