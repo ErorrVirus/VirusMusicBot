@@ -90,12 +90,13 @@ class MusicPlayer {
             try {
                 const fallbackQueries = buildSearchQueries(title, author);
                 let fallbackRes = null;
+                const requester = this.current?.requester || null;
                 for (const q of fallbackQueries) {
                     // Skip ytsearch queries if YouTube client exception occurred
                     if (q.startsWith('ytsearch:') && (reason.includes('AllClients') || reason.includes('login') || reason.includes('403'))) {
                         continue;
                     }
-                    fallbackRes = await this.manager.resolve(q, this.current.requester);
+                    fallbackRes = await this.manager.resolve(q, requester);
                     if (fallbackRes && fallbackRes.tracks.length) break;
                 }
 

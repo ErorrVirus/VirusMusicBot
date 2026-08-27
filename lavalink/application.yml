@@ -15,33 +15,27 @@ plugins:
       skipInitialization: true
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
     clients:
+      - TV
+      - WEB
       - ANDROID_VR
       - ANDROID_MUSIC
-      - MUSIC
-      - TVHTML5EMBEDDED
-      - WEB
     clientOptions:
+      TV:
+        playback: true
+        playlistLoading: false
+        searching: false
+        videoLoading: true
+      WEB:
+        playback: true
+        playlistLoading: true
+        searching: true
+        videoLoading: true
       ANDROID_VR:
         playback: true
         playlistLoading: true
         searching: true
         videoLoading: true
       ANDROID_MUSIC:
-        playback: true
-        playlistLoading: true
-        searching: true
-        videoLoading: true
-      MUSIC:
-        playback: true
-        playlistLoading: true
-        searching: true
-        videoLoading: true
-      TVHTML5EMBEDDED:
-        playback: true
-        playlistLoading: true
-        searching: true
-        videoLoading: true
-      WEB:
         playback: true
         playlistLoading: true
         searching: true
