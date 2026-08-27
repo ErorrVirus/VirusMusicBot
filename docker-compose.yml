@@ -101,8 +101,8 @@ services:
       - LAVALINK_SERVER_RESAMPLINGQUALITY=HIGH
       - LAVALINK_SERVER_TRACKSTUCKTHRESHOLDMS=60000
       # Plugins to download
-      - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:1.18.2
-      - LAVALINK_PLUGINS_0_REPOSITORY=https://maven.lavalink.dev/releases
+      - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:f45bbb7aebfcbc1c553769e04af6cd43afa8b7c3
+      - LAVALINK_PLUGINS_0_REPOSITORY=https://maven.lavalink.dev/snapshots
       - LAVALINK_PLUGINS_1_DEPENDENCY=com.github.topi314.lavasrc:lavasrc-plugin:4.8.3
       - LAVALINK_PLUGINS_1_REPOSITORY=https://maven.lavalink.dev/releases
       # YouTube plugin config
