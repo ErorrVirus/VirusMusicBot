@@ -84,9 +84,9 @@ lavalink:
       http: true
       local: false
     soundcloudFilterOutPreviewTracks: true
-    bufferDurationMs: 1000
-    frameBufferDurationMs: 10000
-    opusEncodingQuality: 10
+    bufferDurationMs: 5000
+    frameBufferDurationMs: 15000
+    opusEncodingQuality: 8
     resamplingQuality: HIGH
     trackStuckThresholdMs: 60000
     useSeekGhosting: true
@@ -101,7 +101,7 @@ lavalink:
       rotation: false
       channelMix: false
       lowPass: false
-    nonAllocating: false
+    nonAllocating: true
 
 metrics:
   prometheus:

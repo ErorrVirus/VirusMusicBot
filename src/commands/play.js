@@ -63,6 +63,8 @@ module.exports = {
                     textId: interaction.channel.id,
                     voiceId: member.voice.channelId
                 });
+            } else {
+                player.textId = interaction.channel.id;
             }
             return player;
         };
@@ -235,7 +237,11 @@ module.exports = {
                 interaction.editReply({ embeds: [successEmbed(`Added [**${track.info.title}**](${track.info.uri}) to the queue.`)] });
             }
 
-            if (!player.current) player.playNext();
+            console.log(`[Play] Enqueued track: "${result.tracks[0]?.info?.title}". player.current: ${!!player.current}`);
+            if (!player.current) {
+                console.log('[Play] Triggering player.playNext()');
+                player.playNext();
+            }
 
         } catch (err) {
             console.error('[Play] Error:', err);

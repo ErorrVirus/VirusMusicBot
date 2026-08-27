@@ -125,6 +125,8 @@ class MusicPlayer {
             this.current = this.queue.shift();
         }
 
+        console.log(`[MusicPlayer] play called for: "${this.current.info?.title || this.current.title}"`);
+
         // Just-In-Time (JIT) Resolving for Spotify/YouTube bypass
         if (this.current.isUnresolved) {
             try {
@@ -148,10 +150,10 @@ class MusicPlayer {
         }
 
         try {
-            // Give Discord Voice UDP socket & DAVE encryption handshake 600ms to stabilize on fresh joins
+            // Give Discord Voice UDP socket & DAVE encryption handshake 1200ms to stabilize on fresh joins
             if (this.isNewConnection) {
                 this.isNewConnection = false;
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 1200));
             }
 
             await this.player.playTrack({ track: { encoded: this.current.encoded } });
