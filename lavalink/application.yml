@@ -8,6 +8,8 @@ plugins:
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
+    remoteCipher:
+      url: "https://cipher.kikkia.dev/"
     oauth:
       enabled: true
       skipInitialization: false
@@ -101,4 +103,12 @@ logging:
     path: ./logs/
   level:
     root: INFO
-    lavalink: INFO
+    lavalink: DEBUG
+    dev.lavalink.youtube: DEBUG
+    com.sedmelluq.discord.lavaplayer.tools.ExceptionTools: DEBUG
+  request:
+    enabled: true
+    includeClientInfo: true
+    includeHeaders: false
+    includeQueryString: true
+    includePayload: true

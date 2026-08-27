@@ -167,6 +167,8 @@ module.exports = {
 
             let candidateQueries = [];
 
+            let result = null;
+
             if (SPOTIFY_URL.test(query)) {
                 // Spotify track → extract details & build candidates
                 const trackMatch = query.match(SPOTIFY_TRACK);
@@ -185,17 +187,23 @@ module.exports = {
                     return interaction.editReply({ embeds: [errorEmbed('Unsupported or unrecognized Spotify link format.')] });
                 }
             } else if (YOUTUBE_VIDEO.test(query)) {
-                // YouTube video URL → fetch title & build candidates
+                // Try direct YouTube link resolution first via Lavalink
+                console.log(`[Play] Attempting direct YouTube link resolution: ${query}`);
                 try {
-                    const video = await getYouTubeSingleTrack(query);
-                    if (video && video.name) {
-                        candidateQueries = buildSearchQueries(video.name, video.artist);
-                    } else {
-                        return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info. Make sure the video is public and not age-restricted.')] });
-                    }
+                    result = await client.manager.resolve(query, interaction.user);
                 } catch (e) {
-                    console.error('[Play] Failed to fetch YouTube video info:', e);
-                    return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info.')] });
+                    console.warn(`[Play] Direct YouTube resolution failed, falling back to search:`, e.message);
+                }
+
+                if (!result || !result.tracks.length) {
+                    try {
+                        const video = await getYouTubeSingleTrack(query);
+                        if (video && video.name) {
+                            candidateQueries = buildSearchQueries(video.name, video.artist);
+                        }
+                    } catch (e) {
+                        console.error('[Play] Failed to fetch YouTube video info:', e);
+                    }
                 }
             } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
                 return interaction.editReply({ embeds: [errorEmbed('Unsupported YouTube link. Please send a direct video link like `youtube.com/watch?v=...`')] });
@@ -205,11 +213,12 @@ module.exports = {
                 candidateQueries = [query];
             }
 
-            let result = null;
-            for (const q of candidateQueries) {
-                console.log(`[Play] Trying search query: "${q}"`);
-                result = await client.manager.resolve(q, interaction.user);
-                if (result && result.tracks.length) break;
+            if (!result || !result.tracks.length) {
+                for (const q of candidateQueries) {
+                    console.log(`[Play] Trying search query: "${q}"`);
+                    result = await client.manager.resolve(q, interaction.user);
+                    if (result && result.tracks.length) break;
+                }
             }
 
             if (!result || !result.tracks.length) {

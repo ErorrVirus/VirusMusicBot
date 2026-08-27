@@ -27,36 +27,34 @@ function baseTitle(title) {
         .trim();
 }
 
-function buildSearchQueries(title, artist = '') {
+function buildSearchQueries(title, artist = '', primaryPrefix = 'ytsearch:') {
     const cleaned = cleanTitle(title);
     const base = baseTitle(title);
     const queries = [];
 
-    // 1. Cleaned title + artist (e.g. "Never Gonna Give You Up Rick Astley")
+    // 1. YouTube cleaned title + artist
     if (artist && cleaned && !cleaned.toLowerCase().includes(artist.toLowerCase())) {
-        queries.push(`scsearch:${cleaned} ${artist}`.trim());
+        queries.push(`${primaryPrefix}${cleaned} ${artist}`.trim());
     }
 
-    // 2. Base title + artist (e.g. "Criminal IRIAS" if "Criminal (Club version)" had special chars)
+    // 2. YouTube base title + artist
     if (artist && base && !base.toLowerCase().includes(artist.toLowerCase())) {
-        queries.push(`scsearch:${base} ${artist}`.trim());
+        queries.push(`${primaryPrefix}${base} ${artist}`.trim());
     }
 
-    // 3. Cleaned title alone
+    // 3. YouTube cleaned title alone
+    if (cleaned) {
+        queries.push(`${primaryPrefix}${cleaned}`);
+    }
+
+    // 4. YouTube raw title + artist
+    if (artist) {
+        queries.push(`${primaryPrefix}${title} ${artist}`.trim());
+    }
+
+    // 5. Fallback to scsearch (SoundCloud) in case YouTube fails
     if (cleaned) {
         queries.push(`scsearch:${cleaned}`);
-    }
-
-    // 4. Base title alone
-    if (base && base !== cleaned) {
-        queries.push(`scsearch:${base}`);
-    }
-
-    // 5. Raw title + artist fallback
-    if (artist) {
-        queries.push(`scsearch:${title} ${artist}`.trim());
-    } else {
-        queries.push(`scsearch:${title}`);
     }
 
     return [...new Set(queries.map(q => q.trim()).filter(Boolean))];
