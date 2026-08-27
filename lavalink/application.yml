@@ -23,8 +23,8 @@ plugins:
     clientOptions:
       TV:
         playback: true
-        playlistLoading: false
-        searching: false
+        playlistLoading: true
+        searching: true
         videoLoading: true
       TVHTML5_SIMPLY:
         playback: true
