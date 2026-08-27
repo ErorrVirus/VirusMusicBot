@@ -59,30 +59,8 @@ class MusicPlayer {
         this.player.on('start', () => this.manager.emit('playerStart', this, this.current));
         this.player.on('end', async (data) => {
             if (data.reason === 'replaced') return;
-            if (data.reason === 'loadFailed' && this.current && !this.current._fallbackTried) {
-                this.current._fallbackTried = true;
-                const title = this.current.info?.title || this.current.title || '';
-                const author = this.current.info?.author || this.current.artist || '';
-                console.log(`[MusicPlayer] Track failed on YouTube (loadFailed). Trying seamless fallback for "${title}"...`);
-                try {
-                    const fallbackQueries = buildSearchQueries(title, author, 'scsearch:');
-                    let fallbackRes = null;
-                    for (const q of fallbackQueries) {
-                        fallbackRes = await this.manager.resolve(q, this.current.requester);
-                        if (fallbackRes && fallbackRes.tracks.length) break;
-                    }
-
-                    if (fallbackRes && fallbackRes.tracks.length) {
-                        this.current = fallbackRes.tracks[0];
-                        this.current._fallbackTried = true;
-                        try { await this.player.stopTrack(); } catch (_) {}
-                        await new Promise(r => setTimeout(r, 200));
-                        await this.player.playTrack({ track: { encoded: this.current.encoded } });
-                        return;
-                    }
-                } catch (e) {
-                    console.error('[MusicPlayer] Fallback attempt error:', e.message);
-                }
+            if (data.reason === 'loadFailed') {
+                return this.handleTrackFailure('loadFailed');
             }
             this.playNext();
         });
@@ -93,12 +71,47 @@ class MusicPlayer {
 
         this.player.on('exception', (data) => {
             this.manager.emit('playerException', this, data);
+            const msg = data.exception?.message || 'Track exception';
+            this.handleTrackFailure(msg);
         });
 
         this.player.on('stuck', (data) => {
             this.manager.emit('playerStuck', this, data);
-            this.playNext();
+            this.handleTrackFailure('stuck');
         });
+    }
+
+    async handleTrackFailure(reason = 'unknown') {
+        if (this.current && !this.current._fallbackTried) {
+            this.current._fallbackTried = true;
+            const title = this.current.info?.title || this.current.title || '';
+            const author = this.current.info?.author || this.current.artist || '';
+            console.log(`[MusicPlayer] Track failed (${reason}). Trying seamless fallback for "${title}"...`);
+            try {
+                const fallbackQueries = buildSearchQueries(title, author);
+                let fallbackRes = null;
+                for (const q of fallbackQueries) {
+                    // Skip ytsearch queries if YouTube client exception occurred
+                    if (q.startsWith('ytsearch:') && (reason.includes('AllClients') || reason.includes('login') || reason.includes('403'))) {
+                        continue;
+                    }
+                    fallbackRes = await this.manager.resolve(q, this.current.requester);
+                    if (fallbackRes && fallbackRes.tracks.length) break;
+                }
+
+                if (fallbackRes && fallbackRes.tracks.length) {
+                    this.current = fallbackRes.tracks[0];
+                    this.current._fallbackTried = true;
+                    try { await this.player.stopTrack(); } catch (_) {}
+                    await new Promise(r => setTimeout(r, 200));
+                    await this.player.playTrack({ track: { encoded: this.current.encoded } });
+                    return;
+                }
+            } catch (e) {
+                console.error('[MusicPlayer] Fallback attempt error:', e.message);
+            }
+        }
+        this.playNext();
     }
 
     async play() {
