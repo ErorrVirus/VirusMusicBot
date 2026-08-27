@@ -30,6 +30,12 @@ class MusicPlayer {
     }
 
     async connect() {
+        if (this.manager.shoukaku.connections.has(this.guildId)) {
+            try {
+                await this.manager.shoukaku.leaveVoiceChannel(this.guildId);
+            } catch (_) {}
+        }
+
         this.player = await this.manager.shoukaku.joinVoiceChannel({
             guildId: this.guildId,
             channelId: this.voiceId,

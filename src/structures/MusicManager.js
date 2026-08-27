@@ -114,7 +114,20 @@ class MusicManager extends EventEmitter {
             if (!node) throw new Error('No Lavalink nodes available');
 
             player = new MusicPlayer(this, node, options);
-            await player.connect();
+            try {
+                await player.connect();
+            } catch (err) {
+                if (err.message && err.message.includes('already have an existing connection')) {
+                    console.warn(`[MusicManager] Connection already existed for ${options.guildId}. Cleaning up and retrying...`);
+                    try {
+                        await this.shoukaku.leaveVoiceChannel(options.guildId);
+                    } catch (_) {}
+                    await new Promise(r => setTimeout(r, 500));
+                    await player.connect();
+                } else {
+                    throw err;
+                }
+            }
             this.players.set(options.guildId, player);
         }
         
