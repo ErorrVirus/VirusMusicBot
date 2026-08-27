@@ -28,11 +28,12 @@ module.exports = {
         await interaction.deferReply();
 
         let query = interaction.options.getString('query').trim();
+        console.log(`[Play] Received command for query: "${query}" from user: ${interaction.user.tag}`);
 
-        // Follow redirects for spotify.link short links
+        // Follow redirects for spotify.link short links with 4s timeout
         if (query.includes('spotify.link/')) {
             try {
-                const res = await fetch(query, { redirect: 'follow' });
+                const res = await fetch(query, { redirect: 'follow', signal: AbortSignal.timeout(4000) });
                 if (res.url && res.url.includes('spotify.com/')) {
                     query = res.url;
                 }

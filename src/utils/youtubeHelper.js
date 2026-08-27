@@ -18,25 +18,31 @@ async function getYouTubePlaylistTracks(url) {
 
 async function getYouTubeSingleTrack(url) {
     try {
-        // Use noembed API to bypass IP blocks for single videos
-        const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
-        const data = await res.json();
-        
-        if (!data || data.error) {
-            // Fallback to youtube-sr if noembed fails
-            const video = await YouTube.getVideo(url);
-            if (!video) return null;
+        // Use noembed API with 4s timeout to bypass IP blocks for single videos
+        const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, {
+            signal: AbortSignal.timeout(4000)
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data && !data.error && data.title) {
+                return { name: data.title, artist: data.author_name || '' };
+            }
+        }
+    } catch (_) {}
+
+    try {
+        const video = await Promise.race([
+            YouTube.getVideo(url),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('YouTube scrape timeout')), 4000))
+        ]);
+        if (video && video.title) {
             return { name: video.title, artist: video.channel?.name || '' };
         }
-        
-        return {
-            name: data.title,
-            artist: data.author_name || ''
-        };
     } catch (err) {
-        console.error('[YouTubeHelper] Error fetching video:', err);
-        return null;
+        console.warn('[YouTubeHelper] Video lookup failed or timed out:', err.message);
     }
+
+    return null;
 }
 
 module.exports = {
