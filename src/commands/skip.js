@@ -10,7 +10,7 @@ module.exports = {
         const { player, error } = validatePlayerConnection(interaction, client);
         if (error) return interaction.reply(error);
 
-        player.player.stopTrack(); // Emits end event, triggering playNext
+        player.playNext();
         interaction.reply({ embeds: [successEmbed('Track skipped.')] });
     }
 };

@@ -22,8 +22,8 @@ class MusicManager extends EventEmitter {
 
         const ShoukakuOptions = {
             moveOnDisconnect: false,
-            resumable: false,
-            resumableTimeout: 30,
+            resumable: true,
+            resumableTimeout: 60,
             reconnectTries: 100,
             reconnectInterval: 5000,
             restTimeout: 10000

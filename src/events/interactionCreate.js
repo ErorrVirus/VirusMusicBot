@@ -66,7 +66,7 @@ module.exports = {
                     }
 
                     case 'music_skip': {
-                        player.player.stopTrack(); // triggers 'end' → playNext()
+                        player.playNext();
                         return interaction.reply({ content: '⏭️  Skipped the track!', ephemeral: true });
                     }
 

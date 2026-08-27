@@ -58,7 +58,8 @@ class MusicPlayer {
 
         this.player.on('start', () => this.manager.emit('playerStart', this, this.current));
         this.player.on('end', async (data) => {
-            if (data.reason === 'replaced') return;
+            console.log(`[MusicPlayer] Track ended. Reason: ${data.reason}`);
+            if (data.reason === 'replaced' || data.reason === 'stopped' || data.reason === 'cleanup') return;
             if (data.reason === 'loadFailed') {
                 return this.handleTrackFailure('loadFailed');
             }

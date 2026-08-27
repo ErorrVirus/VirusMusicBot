@@ -83,11 +83,11 @@ lavalink:
       vimeo: true
       http: true
       local: false
-    bufferDurationMs: 400
-    frameBufferDurationMs: 5000
-    opusEncodingQuality: 6
-    resamplingQuality: LOW
-    trackStuckThresholdMs: 10000
+    bufferDurationMs: 1000
+    frameBufferDurationMs: 10000
+    opusEncodingQuality: 10
+    resamplingQuality: HIGH
+    trackStuckThresholdMs: 30000
     useSeekGhosting: true
     filters:
       volume: true

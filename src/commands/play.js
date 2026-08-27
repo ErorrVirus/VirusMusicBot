@@ -198,18 +198,14 @@ module.exports = {
                     return interaction.editReply({ embeds: [errorEmbed('Unsupported or unrecognized Spotify link format.')] });
                 }
             } else if (YOUTUBE_VIDEO.test(query)) {
-                // Fetch YouTube video metadata via noembed and route to high-speed stream
+                candidateQueries = [query];
                 try {
                     const video = await getYouTubeSingleTrack(query);
                     if (video && video.name) {
-                        candidateQueries = buildSearchQueries(video.name, video.artist, 'scsearch:');
-                    } else {
-                        return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info. Make sure the video is public and not age-restricted.')] });
+                        const searches = buildSearchQueries(video.name, video.artist);
+                        candidateQueries = [query, ...searches];
                     }
-                } catch (e) {
-                    console.error('[Play] Failed to fetch YouTube video info:', e);
-                    return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info.')] });
-                }
+                } catch (_) {}
             } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
                 return interaction.editReply({ embeds: [errorEmbed('Unsupported YouTube link. Please send a direct video link like `youtube.com/watch?v=...`')] });
             } else if (!URL_REGEX.test(query)) {
