@@ -75,23 +75,23 @@ lavalink:
       vimeo: true
       http: true
       local: false
-    bufferDurationMs: 1000
+    bufferDurationMs: 400
     frameBufferDurationMs: 5000
-    opusEncodingQuality: 10
-    resamplingQuality: HIGH
+    opusEncodingQuality: 6
+    resamplingQuality: LOW
     trackStuckThresholdMs: 10000
     useSeekGhosting: true
     filters:
       volume: true
       equalizer: true
-      karaoke: true
-      timescale: true
-      tremolo: true
-      vibrato: true
-      distortion: true
-      rotation: true
-      channelMix: true
-      lowPass: true
+      karaoke: false
+      timescale: false
+      tremolo: false
+      vibrato: false
+      distortion: false
+      rotation: false
+      channelMix: false
+      lowPass: false
     nonAllocating: false
 
 metrics:
