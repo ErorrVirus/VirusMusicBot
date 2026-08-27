@@ -172,12 +172,34 @@ class MusicManager extends EventEmitter {
             }
             case 'search': {
                 if (!result.data || !result.data.length) return null;
-                // Discard 30-second preview snippets completely so we NEVER play snippets
-                const fullTracks = result.data.filter(t => !t.info?.uri?.includes('/preview/') && (!t.info?.length || t.info.length > 55000));
+                // 1. Discard 30-second preview snippets completely (must be > 55s and no /preview/ in URL)
+                let fullTracks = result.data.filter(t => !t.info?.uri?.includes('/preview/') && (!t.info?.length || t.info.length > 55000));
                 if (!fullTracks.length) {
                     console.warn(`[Resolve] Search returned only 30s preview snippets (${query}). Rejecting snippet.`);
                     return null;
                 }
+
+                // 2. Exact match prioritization: Filter out junk remixes, sped up, slowed, reverb, cover, and acapella
+                // unless the user query explicitly searched for them
+                const isExplicitRemix = /remix|sped|speed|slow|reverb|cover|karaoke|acapella|bass boost/i.test(query);
+                if (!isExplicitRemix) {
+                    const originalMatches = fullTracks.filter(t => {
+                        const title = (t.info?.title || '').toLowerCase();
+                        return !title.includes('sped up') &&
+                               !title.includes('speed up') &&
+                               !title.includes('slowed') &&
+                               !title.includes('reverb') &&
+                               !title.includes('bass boost') &&
+                               !title.includes('cover') &&
+                               !title.includes('acapella') &&
+                               !title.includes('karaoke') &&
+                               !title.includes('remix');
+                    });
+                    if (originalMatches.length > 0) {
+                        fullTracks = originalMatches;
+                    }
+                }
+
                 const track = fullTracks[0];
                 track.requester = requester;
                 return { type: 'search', tracks: [track], playlistName: null };
