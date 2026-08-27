@@ -16,6 +16,7 @@ plugins:
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
     clients:
       - TV
+      - TVHTML5_SIMPLY
       - WEB
       - ANDROID_VR
       - ANDROID_MUSIC
@@ -24,6 +25,11 @@ plugins:
         playback: true
         playlistLoading: false
         searching: false
+        videoLoading: true
+      TVHTML5_SIMPLY:
+        playback: true
+        playlistLoading: true
+        searching: true
         videoLoading: true
       WEB:
         playback: true
