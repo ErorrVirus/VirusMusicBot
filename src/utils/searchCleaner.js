@@ -33,34 +33,34 @@ function buildSearchQueries(title, artist = '') {
     const queries = [];
     const arabicPart = (title.match(/[\u0600-\u06FF\s\d]+/g) || []).join(' ').replace(/\s+/g, ' ').trim();
 
-    // 1. Cleaned English title on SoundCloud and YouTube
+    // 1. Cleaned English title on YouTube (full song) and SoundCloud (backup)
     if (cleaned) {
-        queries.push(`scsearch:${cleaned}`);
         queries.push(`ytsearch:${cleaned}`);
+        queries.push(`scsearch:${cleaned}`);
     }
 
-    // 2. Arabic title segment (essential for Arabic music on SoundCloud/YouTube)
+    // 2. Arabic title segment (essential for Arabic music on YouTube/SoundCloud)
     if (arabicPart && arabicPart.length > 2) {
-        queries.push(`scsearch:${arabicPart}`);
         queries.push(`ytsearch:${arabicPart}`);
+        queries.push(`scsearch:${arabicPart}`);
     }
 
     // 3. Cleaned title + artist
     if (artist && cleaned && !cleaned.toLowerCase().includes(artist.toLowerCase())) {
-        queries.push(`scsearch:${cleaned} ${artist}`.trim());
         queries.push(`ytsearch:${cleaned} ${artist}`.trim());
+        queries.push(`scsearch:${cleaned} ${artist}`.trim());
     }
 
     // 4. Base title + artist
     if (artist && base && !base.toLowerCase().includes(artist.toLowerCase())) {
-        queries.push(`scsearch:${base} ${artist}`.trim());
         queries.push(`ytsearch:${base} ${artist}`.trim());
+        queries.push(`scsearch:${base} ${artist}`.trim());
     }
 
     // 5. Raw title fallback
     if (title && title !== cleaned) {
-        queries.push(`scsearch:${title}`.trim());
         queries.push(`ytsearch:${title}`.trim());
+        queries.push(`scsearch:${title}`.trim());
     }
 
     return [...new Set(queries.map(q => q.trim()).filter(Boolean))];

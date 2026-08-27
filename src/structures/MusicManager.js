@@ -172,7 +172,9 @@ class MusicManager extends EventEmitter {
             }
             case 'search': {
                 if (!result.data || !result.data.length) return null;
-                const track = result.data[0];
+                // Filter out 30-40 second preview snippets (like SoundCloud Go+ previews) when full tracks exist
+                const fullTracks = result.data.filter(t => !t.info?.uri?.includes('/preview/') && (!t.info?.length || t.info.length > 50000));
+                const track = fullTracks.length ? fullTracks[0] : result.data[0];
                 track.requester = requester;
                 return { type: 'search', tracks: [track], playlistName: null };
             }
