@@ -52,7 +52,13 @@ class MusicPlayer {
                 const author = this.current.info?.author || this.current.artist || '';
                 console.log(`[MusicPlayer] Track failed on YouTube (loadFailed). Trying seamless fallback for "${title}"...`);
                 try {
-                    const fallbackRes = await this.manager.resolve(`scsearch:${title} ${author}`.trim(), this.current.requester);
+                    const fallbackQueries = buildSearchQueries(title, author, 'scsearch:');
+                    let fallbackRes = null;
+                    for (const q of fallbackQueries) {
+                        fallbackRes = await this.manager.resolve(q, this.current.requester);
+                        if (fallbackRes && fallbackRes.tracks.length) break;
+                    }
+
                     if (fallbackRes && fallbackRes.tracks.length) {
                         this.current = fallbackRes.tracks[0];
                         this.current._fallbackTried = true;

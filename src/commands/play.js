@@ -197,23 +197,17 @@ module.exports = {
                     return interaction.editReply({ embeds: [errorEmbed('Unsupported or unrecognized Spotify link format.')] });
                 }
             } else if (YOUTUBE_VIDEO.test(query)) {
-                // Try direct YouTube link resolution first via Lavalink
-                console.log(`[Play] Attempting direct YouTube link resolution: ${query}`);
+                // Fetch YouTube video metadata via noembed and route to high-speed stream
                 try {
-                    result = await client.manager.resolve(query, interaction.user);
-                } catch (e) {
-                    console.warn(`[Play] Direct YouTube resolution failed, falling back to search:`, e.message);
-                }
-
-                if (!result || !result.tracks.length) {
-                    try {
-                        const video = await getYouTubeSingleTrack(query);
-                        if (video && video.name) {
-                            candidateQueries = buildSearchQueries(video.name, video.artist);
-                        }
-                    } catch (e) {
-                        console.error('[Play] Failed to fetch YouTube video info:', e);
+                    const video = await getYouTubeSingleTrack(query);
+                    if (video && video.name) {
+                        candidateQueries = buildSearchQueries(video.name, video.artist, 'scsearch:');
+                    } else {
+                        return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info. Make sure the video is public and not age-restricted.')] });
                     }
+                } catch (e) {
+                    console.error('[Play] Failed to fetch YouTube video info:', e);
+                    return interaction.editReply({ embeds: [errorEmbed('Could not fetch YouTube video info.')] });
                 }
             } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
                 return interaction.editReply({ embeds: [errorEmbed('Unsupported YouTube link. Please send a direct video link like `youtube.com/watch?v=...`')] });

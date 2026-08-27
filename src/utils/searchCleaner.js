@@ -27,7 +27,7 @@ function baseTitle(title) {
         .trim();
 }
 
-function buildSearchQueries(title, artist = '', primaryPrefix = 'ytsearch:') {
+function buildSearchQueries(title, artist = '', primaryPrefix = 'scsearch:') {
     const cleaned = cleanTitle(title);
     const base = baseTitle(title);
     const queries = [];
