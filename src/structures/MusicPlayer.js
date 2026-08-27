@@ -29,19 +29,32 @@ class MusicPlayer {
         this.connectionTimeout = null;
     }
 
-    async connect() {
+    async connect(retries = 2) {
         if (this.manager.shoukaku.connections.has(this.guildId)) {
             try {
                 await this.manager.shoukaku.leaveVoiceChannel(this.guildId);
             } catch (_) {}
         }
 
-        this.player = await this.manager.shoukaku.joinVoiceChannel({
-            guildId: this.guildId,
-            channelId: this.voiceId,
-            shardId: 0,
-            deaf: true
-        });
+        try {
+            this.player = await this.manager.shoukaku.joinVoiceChannel({
+                guildId: this.guildId,
+                channelId: this.voiceId,
+                shardId: 0,
+                deaf: true
+            });
+        } catch (err) {
+            console.error(`[MusicPlayer] Voice connection error: ${err.message}`);
+            if (retries > 0) {
+                console.log(`[MusicPlayer] Retrying voice connection in 1s... (${retries} attempts left)`);
+                try {
+                    await this.manager.shoukaku.leaveVoiceChannel(this.guildId);
+                } catch (_) {}
+                await new Promise(r => setTimeout(r, 1000));
+                return this.connect(retries - 1);
+            }
+            throw err;
+        }
 
         this.player.on('start', () => this.manager.emit('playerStart', this, this.current));
         this.player.on('end', async (data) => {

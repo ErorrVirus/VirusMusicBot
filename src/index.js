@@ -2,6 +2,13 @@ require('dotenv').config();
 const dns = require('node:dns');
 dns.setDefaultResultOrder('ipv4first');
 
+const { setGlobalDispatcher, Agent } = require('undici');
+setGlobalDispatcher(new Agent({
+    keepAliveTimeout: 10000,
+    keepAliveMaxTimeout: 30000,
+    connect: { timeout: 10000 }
+}));
+
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 const MusicManager = require('./structures/MusicManager');
