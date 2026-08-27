@@ -44,6 +44,9 @@ class MusicManager extends EventEmitter {
                 player.connectionTimeout = null;
             }
 
+            const channel = this.client.channels.cache.get(player.textId);
+            if (!channel) return;
+
             // Delete old Now Playing embed so there is never a duplicate on screen
             if (player.nowPlayingMessage) {
                 player.nowPlayingMessage.delete().catch(() => {});
