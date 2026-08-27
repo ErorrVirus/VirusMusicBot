@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  bot:
+    image: node:20-alpine
+    container_name: virusmusicbot_bot
+    restart: unless-stopped
+    working_dir: /app
+    # Wait until lavalink passes its healthcheck before starting
+    depends_on:
+      lavalink:
+        condition: service_healthy
+    networks:
+      - virusmusicbot_net
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    command: >
+      sh -c "apk add --no-cache git &&
+      rm -rf /app/* /app/.[!.]* &&
+      git clone https://github.com/ErorrVirus/VirusMusicBot.git . &&
+      npm install --omit=dev &&
+      echo 'Lavalink is healthy — starting bot...' &&
+      node src/index.js"
+    ports:
+      # Exposed to the local network so you can access it via your TrueNAS IP
+      - "4000:4000"
+    volumes:
+      - ${SSL_CRT_HOST_PATH:-./certificate.crt}:/certs/certificate.crt:ro
+      - ${SSL_KEY_HOST_PATH:-./private.key}:/certs/private.key:ro
+    environment:
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - LAVALINK_HOST=virusmusicbot_lavalink
+      - LAVALINK_PORT=2333
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - SPOTIFY_SPDC=${SPOTIFY_SPDC}
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASS=${DASHBOARD_PASS:-admin123}
+      - SSL_CRT_PATH=${SSL_CRT_PATH}
+      - SSL_KEY_PATH=${SSL_KEY_PATH}
+
+  yt-cipher:
+    image: ghcr.io/kikkia/yt-cipher:master
+    container_name: virusmusicbot_yt_cipher
+    restart: unless-stopped
+    networks:
+      - virusmusicbot_net
+    environment:
+      - OVERRIDE_SCRIPT_VARIANT=IAS
+
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2
+    container_name: virusmusicbot_lavalink
+    user: "root"
+    restart: unless-stopped
+    depends_on:
+      - yt-cipher
+    networks:
+      - virusmusicbot_net
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - ./lavalink/plugins:/opt/Lavalink/plugins
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
+    # Healthcheck: Lavalink responds with 401 (wrong auth) or 200 (correct auth)
+    # either way means the HTTP server is fully up and ready.
+    healthcheck:
+      test: ["CMD-SHELL", "wget --header=\"Authorization: ${LAVALINK_PASSWORD:-youshallnotpass}\" -qO- http://localhost:2333/version -S 2>&1 | grep -q 'HTTP/' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    environment:
+      # G1GC: low-pause concurrent GC. MaxGCPauseMillis=20 bounds stop-the-world
+      # pauses to ~20ms, preventing audio glitches caused by JVM GC pauses.
+      # G1HeapRegionSize=4m is optimal for 1GB heap on a 4-core i5-4590.
+      - _JAVA_OPTIONS=-Xmx1G -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:G1HeapRegionSize=4m -XX:+ParallelRefProcEnabled -Djava.net.preferIPv4Stack=true -Duser.language=en -Duser.country=US
+      # Server
+      - SERVER_PORT=2333
+      - SERVER_ADDRESS=0.0.0.0
+      # Auth
+      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      # Sources (disable default YouTube, use plugin instead)
+      - LAVALINK_SERVER_SOURCES_YOUTUBE=false
+      - LAVALINK_SERVER_SOURCES_BANDCAMP=true
+      - LAVALINK_SERVER_SOURCES_SOUNDCLOUD=true
+      - LAVALINK_SERVER_SOURCES_TWITCH=true
+      - LAVALINK_SERVER_SOURCES_VIMEO=true
+      - LAVALINK_SERVER_SOURCES_HTTP=true
+      - LAVALINK_SERVER_SOURCES_LOCAL=false
+      # Plugins to download
+      - LAVALINK_PLUGINS_0_DEPENDENCY=dev.lavalink.youtube:youtube-plugin:1.18.2
+      - LAVALINK_PLUGINS_0_REPOSITORY=https://maven.lavalink.dev/releases
+      - LAVALINK_PLUGINS_1_DEPENDENCY=com.github.topi314.lavasrc:lavasrc-plugin:4.8.3
+      - LAVALINK_PLUGINS_1_REPOSITORY=https://maven.lavalink.dev/releases
+      # YouTube plugin config
+      - PLUGINS_YOUTUBE_ENABLED=true
+      - PLUGINS_YOUTUBE_OAUTH_ENABLED=true
+      - PLUGINS_YOUTUBE_ALLOWSEARCH=true
+      - PLUGINS_YOUTUBE_ALLOWDIRECTVIDEOIDS=true
+      - PLUGINS_YOUTUBE_ALLOWDIRECTPLAYLISTIDS=true
+      - PLUGINS_YOUTUBE_OAUTH_SKIPINITIALIZATION=false
+      - PLUGINS_YOUTUBE_OAUTH_REFRESHTOKEN=${YOUTUBE_REFRESH_TOKEN:-}
+      - PLUGINS_YOUTUBE_CLIENTS_0=MUSIC
+      - PLUGINS_YOUTUBE_CLIENTS_1=ANDROID_VR
+      - PLUGINS_YOUTUBE_CLIENTS_2=ANDROID_MUSIC
+      - PLUGINS_YOUTUBE_CLIENTS_3=WEB
+      - PLUGINS_YOUTUBE_CLIENTS_4=TVHTML5EMBEDDED
+      - PLUGINS_YOUTUBE_CLIENTS_5=IOS
+      - PLUGINS_YOUTUBE_CLIENTS_6=MWEB
+      # LavaSrc search providers
+      - PLUGINS_LAVASRC_PROVIDERS_0=ytsearch:"%ISRC%"
+      - PLUGINS_LAVASRC_PROVIDERS_1=ytsearch:%QUERY%
+      # LavaSrc enabled sources
+      - PLUGINS_LAVASRC_SOURCES_SPOTIFY=true
+      - PLUGINS_LAVASRC_SOURCES_APPLEMUSIC=false
+      - PLUGINS_LAVASRC_SOURCES_DEEZER=false
+      - PLUGINS_LAVASRC_SOURCES_YANDEXMUSIC=false
+      - PLUGINS_LAVASRC_SOURCES_FLOWERYTTS=false
+      - PLUGINS_LAVASRC_SOURCES_YOUTUBE=false
+      # Spotify credentials (use BOTH methods for best compatibility)
+      - PLUGINS_LAVASRC_SPOTIFY_CLIENTID=${SPOTIFY_CLIENT_ID}
+      - PLUGINS_LAVASRC_SPOTIFY_CLIENTSECRET=${SPOTIFY_CLIENT_SECRET}
+      - PLUGINS_LAVASRC_SPOTIFY_SPDC=${SPOTIFY_SPDC}
+      - PLUGINS_LAVASRC_SPOTIFY_PREFERPARTNERAPI=true
+      - PLUGINS_LAVASRC_SPOTIFY_COUNTRYCODE=US
+      - PLUGINS_LAVASRC_SPOTIFY_PLAYLISTLOADLIMIT=6
+      - PLUGINS_LAVASRC_SPOTIFY_ALBUMLOADLIMIT=6
+
+volumes:
+  lavalink_plugins:
+
+networks:
+  virusmusicbot_net:
+    name: virusmusicbot_net
