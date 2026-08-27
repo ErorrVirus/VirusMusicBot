@@ -27,24 +27,40 @@ function baseTitle(title) {
         .trim();
 }
 
-function buildSearchQueries(title, artist = '', primaryPrefix = 'scsearch:') {
+function buildSearchQueries(title, artist = '') {
     const cleaned = cleanTitle(title);
     const base = baseTitle(title);
     const queries = [];
+    const arabicPart = (title.match(/[\u0600-\u06FF\s\d]+/g) || []).join(' ').replace(/\s+/g, ' ').trim();
 
-    // 1. Cleaned title alone (e.g. "Moscow X Kay Tawahin")
+    // 1. Cleaned English title on SoundCloud and YouTube
     if (cleaned) {
-        queries.push(`${primaryPrefix}${cleaned}`);
+        queries.push(`scsearch:${cleaned}`);
+        queries.push(`ytsearch:${cleaned}`);
     }
 
-    // 2. Cleaned title + artist
+    // 2. Arabic title segment (essential for Arabic music on SoundCloud/YouTube)
+    if (arabicPart && arabicPart.length > 2) {
+        queries.push(`scsearch:${arabicPart}`);
+        queries.push(`ytsearch:${arabicPart}`);
+    }
+
+    // 3. Cleaned title + artist
     if (artist && cleaned && !cleaned.toLowerCase().includes(artist.toLowerCase())) {
-        queries.push(`${primaryPrefix}${cleaned} ${artist}`.trim());
+        queries.push(`scsearch:${cleaned} ${artist}`.trim());
+        queries.push(`ytsearch:${cleaned} ${artist}`.trim());
     }
 
-    // 3. Base title + artist
+    // 4. Base title + artist
     if (artist && base && !base.toLowerCase().includes(artist.toLowerCase())) {
-        queries.push(`${primaryPrefix}${base} ${artist}`.trim());
+        queries.push(`scsearch:${base} ${artist}`.trim());
+        queries.push(`ytsearch:${base} ${artist}`.trim());
+    }
+
+    // 5. Raw title fallback
+    if (title && title !== cleaned) {
+        queries.push(`scsearch:${title}`.trim());
+        queries.push(`ytsearch:${title}`.trim());
     }
 
     return [...new Set(queries.map(q => q.trim()).filter(Boolean))];
