@@ -1,6 +1,123 @@
 const { errorEmbed } = require('../utils/embedBuilder');
 const { buildSearchQueries } = require('../utils/searchCleaner');
 
+const EQ_PRESETS = {
+    off: [],
+    rich: [ // Studio Grade Warmth, Punchy Bass & Crisp Highs
+        { band: 0, gain: 0.24 },
+        { band: 1, gain: 0.20 },
+        { band: 2, gain: 0.15 },
+        { band: 3, gain: 0.08 },
+        { band: 4, gain: 0.04 },
+        { band: 5, gain: 0.00 },
+        { band: 6, gain: -0.02 },
+        { band: 7, gain: 0.00 },
+        { band: 8, gain: 0.02 },
+        { band: 9, gain: 0.05 },
+        { band: 10, gain: 0.08 },
+        { band: 11, gain: 0.10 },
+        { band: 12, gain: 0.08 },
+        { band: 13, gain: 0.05 },
+        { band: 14, gain: 0.03 }
+    ],
+    bass_low: [
+        { band: 0, gain: 0.15 },
+        { band: 1, gain: 0.12 },
+        { band: 2, gain: 0.08 },
+        { band: 3, gain: 0.04 },
+        { band: 4, gain: 0.00 }
+    ],
+    bass_medium: [
+        { band: 0, gain: 0.28 },
+        { band: 1, gain: 0.22 },
+        { band: 2, gain: 0.16 },
+        { band: 3, gain: 0.10 },
+        { band: 4, gain: 0.05 }
+    ],
+    bass_high: [
+        { band: 0, gain: 0.40 },
+        { band: 1, gain: 0.32 },
+        { band: 2, gain: 0.24 },
+        { band: 3, gain: 0.16 },
+        { band: 4, gain: 0.08 }
+    ],
+    bass_extreme: [
+        { band: 0, gain: 0.55 },
+        { band: 1, gain: 0.45 },
+        { band: 2, gain: 0.35 },
+        { band: 3, gain: 0.22 },
+        { band: 4, gain: 0.12 }
+    ],
+    pop: [
+        { band: 0, gain: -0.02 },
+        { band: 1, gain: -0.01 },
+        { band: 2, gain: 0.08 },
+        { band: 3, gain: 0.14 },
+        { band: 4, gain: 0.16 },
+        { band: 5, gain: 0.12 },
+        { band: 6, gain: 0.05 },
+        { band: 7, gain: -0.02 },
+        { band: 8, gain: -0.03 },
+        { band: 9, gain: 0.05 },
+        { band: 10, gain: 0.08 },
+        { band: 11, gain: 0.10 },
+        { band: 12, gain: 0.08 },
+        { band: 13, gain: 0.04 },
+        { band: 14, gain: 0.02 }
+    ],
+    rock: [
+        { band: 0, gain: 0.30 },
+        { band: 1, gain: 0.25 },
+        { band: 2, gain: 0.20 },
+        { band: 3, gain: 0.10 },
+        { band: 4, gain: 0.05 },
+        { band: 5, gain: -0.05 },
+        { band: 6, gain: -0.08 },
+        { band: 7, gain: -0.04 },
+        { band: 8, gain: 0.00 },
+        { band: 9, gain: 0.08 },
+        { band: 10, gain: 0.14 },
+        { band: 11, gain: 0.18 },
+        { band: 12, gain: 0.14 },
+        { band: 13, gain: 0.08 },
+        { band: 14, gain: 0.04 }
+    ],
+    electronic: [
+        { band: 0, gain: 0.35 },
+        { band: 1, gain: 0.30 },
+        { band: 2, gain: 0.20 },
+        { band: 3, gain: 0.05 },
+        { band: 4, gain: -0.05 },
+        { band: 5, gain: -0.05 },
+        { band: 6, gain: 0.00 },
+        { band: 7, gain: 0.05 },
+        { band: 8, gain: 0.10 },
+        { band: 9, gain: 0.15 },
+        { band: 10, gain: 0.18 },
+        { band: 11, gain: 0.15 },
+        { band: 12, gain: 0.10 },
+        { band: 13, gain: 0.05 },
+        { band: 14, gain: 0.02 }
+    ],
+    vocal: [
+        { band: 0, gain: -0.15 },
+        { band: 1, gain: -0.10 },
+        { band: 2, gain: -0.05 },
+        { band: 3, gain: 0.00 },
+        { band: 4, gain: 0.05 },
+        { band: 5, gain: 0.15 },
+        { band: 6, gain: 0.20 },
+        { band: 7, gain: 0.20 },
+        { band: 8, gain: 0.15 },
+        { band: 9, gain: 0.10 },
+        { band: 10, gain: 0.05 },
+        { band: 11, gain: 0.00 },
+        { band: 12, gain: -0.05 },
+        { band: 13, gain: -0.10 },
+        { band: 14, gain: -0.15 }
+    ]
+};
+
 class MusicPlayer {
     constructor(manager, node, options) {
         this.manager = manager;
@@ -22,6 +139,10 @@ class MusicPlayer {
         this.loop = 'none'; // none, track, queue
         this.volume = 100;
         this.isPaused = false;
+        
+        // Equalizer Preset (Default: Rich Studio Enhancement)
+        this.preset = 'rich';
+        this.currentEqualizer = EQ_PRESETS.rich;
         
         // Reference to the Now Playing message so we can live-edit the volume bar
         this.nowPlayingMessage = null;
@@ -82,6 +203,27 @@ class MusicPlayer {
             this.manager.emit('playerStuck', this, data);
             this.handleTrackFailure('stuck');
         });
+    }
+
+    async setEqualizerPreset(presetName) {
+        const bands = EQ_PRESETS[presetName] !== undefined ? EQ_PRESETS[presetName] : EQ_PRESETS.rich;
+        this.preset = presetName;
+        this.currentEqualizer = bands;
+        if (this.player) {
+            await this.player.setEqualizer(bands);
+        }
+    }
+
+    async setBassBoost(level) {
+        let presetKey = 'off';
+        if (level === 'low') presetKey = 'bass_low';
+        else if (level === 'medium') presetKey = 'bass_medium';
+        else if (level === 'high') presetKey = 'bass_high';
+        else if (level === 'extreme') presetKey = 'bass_extreme';
+        else if (level === 'off') presetKey = 'off';
+        else presetKey = 'rich';
+
+        await this.setEqualizerPreset(presetKey);
     }
 
     async handleTrackFailure(reason = 'unknown') {
@@ -150,20 +292,21 @@ class MusicPlayer {
         }
 
         try {
-            // Give Discord Voice UDP socket & DAVE encryption handshake 1200ms to stabilize on fresh joins
+            // Allow Discord Voice UDP socket & DAVE encryption handshake to stabilize on fresh joins
             if (this.isNewConnection) {
                 this.isNewConnection = false;
-                await new Promise(r => setTimeout(r, 1200));
+                await new Promise(r => setTimeout(r, 600));
             }
 
             await this.player.playTrack({ track: { encoded: this.current.encoded } });
-            // Only restore volume if it's not the default (100).
-            // We intentionally do NOT call setGlobalVolume here on every track start
-            // because that triggers a Lavalink filter update during audio buffer
-            // initialization, causing a race condition that manifests as startup stutter.
-            // Lavalink remembers the player's volume across tracks on the same session.
+            
+            // Apply Rich Equalizer preset (Studio Bass & Clarity)
+            if (this.currentEqualizer && this.currentEqualizer.length > 0) {
+                await this.player.setEqualizer(this.currentEqualizer).catch(() => {});
+            }
+
             if (this.volume !== 100) {
-                await this.player.setGlobalVolume(this.volume);
+                await this.player.setGlobalVolume(this.volume).catch(() => {});
             }
         } catch (error) {
             console.error('Failed to play track', error);
@@ -247,3 +390,4 @@ class MusicPlayer {
 }
 
 module.exports = MusicPlayer;
+module.exports.EQ_PRESETS = EQ_PRESETS;

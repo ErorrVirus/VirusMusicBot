@@ -86,7 +86,7 @@ lavalink:
       local: false
     soundcloudFilterOutPreviewTracks: true
     bufferDurationMs: 400
-    frameBufferDurationMs: 5000
+    frameBufferDurationMs: 1000
     opusEncodingQuality: 10
     resamplingQuality: HIGH
     trackStuckThresholdMs: 60000
