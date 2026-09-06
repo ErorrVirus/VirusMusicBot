@@ -50,6 +50,7 @@ plugins:
     providers:
       - 'ytsearch:"%ISRC%"'
       - 'ytsearch:%QUERY%'
+      - 'scsearch:%QUERY%'
     sources:
       spotify: true
       appleMusic: false
@@ -87,7 +88,7 @@ lavalink:
     bufferDurationMs: 400
     frameBufferDurationMs: 5000
     opusEncodingQuality: 10
-    resamplingQuality: MEDIUM
+    resamplingQuality: HIGH
     trackStuckThresholdMs: 60000
     useSeekGhosting: true
     filters:
