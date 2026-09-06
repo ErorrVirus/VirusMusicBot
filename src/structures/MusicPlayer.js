@@ -3,50 +3,50 @@ const { buildSearchQueries } = require('../utils/searchCleaner');
 
 const EQ_PRESETS = {
     off: [],
-    rich: [ // Studio Grade Warmth, Punchy Bass & Crisp Highs
-        { band: 0, gain: 0.24 },
-        { band: 1, gain: 0.20 },
-        { band: 2, gain: 0.15 },
-        { band: 3, gain: 0.08 },
-        { band: 4, gain: 0.04 },
+    rich: [ // Studio Reference Balanced - Tight Punchy Bass, Crystal Clear Vocals & Smooth Highs
+        { band: 0, gain: 0.07 },
+        { band: 1, gain: 0.06 },
+        { band: 2, gain: 0.04 },
+        { band: 3, gain: 0.02 },
+        { band: 4, gain: 0.00 },
         { band: 5, gain: 0.00 },
-        { band: 6, gain: -0.02 },
+        { band: 6, gain: 0.00 },
         { band: 7, gain: 0.00 },
-        { band: 8, gain: 0.02 },
-        { band: 9, gain: 0.05 },
-        { band: 10, gain: 0.08 },
-        { band: 11, gain: 0.10 },
-        { band: 12, gain: 0.08 },
-        { band: 13, gain: 0.05 },
-        { band: 14, gain: 0.03 }
+        { band: 8, gain: 0.00 },
+        { band: 9, gain: 0.01 },
+        { band: 10, gain: 0.02 },
+        { band: 11, gain: 0.03 },
+        { band: 12, gain: 0.03 },
+        { band: 13, gain: 0.02 },
+        { band: 14, gain: 0.01 }
     ],
     bass_low: [
-        { band: 0, gain: 0.15 },
-        { band: 1, gain: 0.12 },
-        { band: 2, gain: 0.08 },
-        { band: 3, gain: 0.04 },
+        { band: 0, gain: 0.10 },
+        { band: 1, gain: 0.08 },
+        { band: 2, gain: 0.05 },
+        { band: 3, gain: 0.02 },
         { band: 4, gain: 0.00 }
     ],
     bass_medium: [
+        { band: 0, gain: 0.18 },
+        { band: 1, gain: 0.14 },
+        { band: 2, gain: 0.10 },
+        { band: 3, gain: 0.05 },
+        { band: 4, gain: 0.02 }
+    ],
+    bass_high: [
         { band: 0, gain: 0.28 },
         { band: 1, gain: 0.22 },
         { band: 2, gain: 0.16 },
-        { band: 3, gain: 0.10 },
-        { band: 4, gain: 0.05 }
-    ],
-    bass_high: [
-        { band: 0, gain: 0.40 },
-        { band: 1, gain: 0.32 },
-        { band: 2, gain: 0.24 },
-        { band: 3, gain: 0.16 },
-        { band: 4, gain: 0.08 }
+        { band: 3, gain: 0.08 },
+        { band: 4, gain: 0.04 }
     ],
     bass_extreme: [
-        { band: 0, gain: 0.55 },
-        { band: 1, gain: 0.45 },
-        { band: 2, gain: 0.35 },
-        { band: 3, gain: 0.22 },
-        { band: 4, gain: 0.12 }
+        { band: 0, gain: 0.40 },
+        { band: 1, gain: 0.32 },
+        { band: 2, gain: 0.22 },
+        { band: 3, gain: 0.12 },
+        { band: 4, gain: 0.06 }
     ],
     pop: [
         { band: 0, gain: -0.02 },
