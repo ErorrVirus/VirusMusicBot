@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 const { validatePlayerConnection } = require('../utils/helpers');
 
@@ -10,10 +10,12 @@ module.exports = {
         const { player, error } = validatePlayerConnection(interaction, client);
         if (error) return interaction.reply(error);
 
-        if (!player.isPaused) return interaction.reply({ embeds: [errorEmbed('The track is not paused.')], ephemeral: true });
+        if (!player.isPaused) {
+            return interaction.reply({ embeds: [errorEmbed('The track is not paused.')], flags: MessageFlags.Ephemeral });
+        }
 
-        player.player.setPaused(false);
-        player.isPaused = false;
-        interaction.reply({ embeds: [successEmbed('Track resumed.')] });
+        await player.setPaused(false);
+        client.manager.scheduleNowPlayingRefresh(player);
+        return interaction.reply({ embeds: [successEmbed('▶️ Track resumed.')] });
     }
 };

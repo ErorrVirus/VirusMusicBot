@@ -7,10 +7,10 @@ module.exports = {
         .setName('stop')
         .setDescription('Stop music and clear the queue (without disconnecting).'),
     async execute(interaction, client) {
-        const { player, error } = validatePlayerConnection(interaction, client);
+        const { player, error } = validatePlayerConnection(interaction, client, { requireCurrent: false });
         if (error) return interaction.reply(error);
 
-        player.stop();
-        interaction.reply({ embeds: [successEmbed('⏹️ Stopped music and cleared the queue.')] });
+        await player.stop();
+        return interaction.reply({ embeds: [successEmbed('⏹️ Stopped music and cleared the queue.')] });
     }
 };

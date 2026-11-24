@@ -1,42 +1,43 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { buildEmbed } = require('../utils/embedBuilder');
-const { formatTime, validatePlayerConnection } = require('../utils/helpers');
+const { validatePlayerConnection } = require('../utils/helpers');
+const { formatTrackLink, formatTrackDuration } = require('../utils/trackUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('queue')
-        .setDescription('View the current music queue.'),
+        .setDescription('View the current music queue.')
+        .addIntegerOption(option =>
+            option.setName('page')
+                .setDescription('Queue page number')
+                .setMinValue(1)
+        ),
     async execute(interaction, client) {
-        const { player, error } = validatePlayerConnection(interaction, client, { requireVoice: false });
+        const { player, error } = validatePlayerConnection(interaction, client, { requireCurrent: false, requireVoice: false });
         if (error) return interaction.reply(error);
+
+        const pageSize = 10;
+        const totalPages = Math.max(1, Math.ceil(player.queue.length / pageSize));
+        const page = Math.min(totalPages, interaction.options.getInteger('page') || 1);
+        const start = (page - 1) * pageSize;
 
         let queueStr = 'The queue is currently empty.';
         if (player.queue.length > 0) {
-            const tracks = player.queue.slice(0, 10).map((track, i) => {
-                const title = track.info?.title ?? track.title ?? 'Unknown Track';
-                const uri = track.info?.uri ?? '';
-                const lengthStr = track.info?.length ? ` \`[${formatTime(track.info.length)}]\`` : '';
-                const link = uri ? `[${title}](${uri})` : title;
-                return `**${i + 1}.** ${link}${lengthStr}`;
-            }).join('\n');
-
-            queueStr = tracks;
-            if (player.queue.length > 10) {
-                queueStr += `\n*... and ${player.queue.length - 10} more track(s)*`;
-            }
+            queueStr = player.queue.slice(start, start + pageSize).map((track, i) =>
+                `**${start + i + 1}.** ${formatTrackLink(track)} \`[${formatTrackDuration(track)}]\``
+            ).join('\n');
         }
 
-        const currentTitle = player.current?.info?.title ?? player.current?.title ?? 'Unknown Track';
-        const currentUri = player.current?.info?.uri ?? '';
-        const currentLength = player.current?.info?.length ? ` \`[${formatTime(player.current.info.length)}]\`` : '';
-        const currentStr = currentUri ? `[${currentTitle}](${currentUri})${currentLength}` : `${currentTitle}${currentLength}`;
+        const currentStr = player.current
+            ? `${formatTrackLink(player.current, true)} \`[${formatTrackDuration(player.current)}]\``
+            : 'Nothing currently playing';
 
         const embed = buildEmbed({
             title: `Queue for ${interaction.guild.name}`,
             description: `**Now Playing:**\n${currentStr}\n\n**Up Next:**\n${queueStr}`,
-            footer: { text: `Total tracks: ${player.queue.length} | Loop: ${player.loop}` }
+            footer: { text: `Page ${page}/${totalPages} • ${player.queue.length} queued • Loop: ${player.loop} • Autoplay: ${player.autoplay ? 'On' : 'Off'}` }
         });
 
-        interaction.reply({ embeds: [embed] });
+        return interaction.reply({ embeds: [embed] });
     }
 };

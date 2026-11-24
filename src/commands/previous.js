@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 const { validatePlayerConnection } = require('../utils/helpers');
 
@@ -10,9 +10,12 @@ module.exports = {
         const { player, error } = validatePlayerConnection(interaction, client, { requireCurrent: false });
         if (error) return interaction.reply(error);
 
-        const success = player.playPrevious();
-        if (!success) return interaction.reply({ embeds: [errorEmbed('There is no previous track in history.')], ephemeral: true });
+        await interaction.deferReply();
+        const success = await player.playPrevious();
+        if (!success) {
+            return interaction.editReply({ embeds: [errorEmbed('There is no previous track in history.')] });
+        }
 
-        interaction.reply({ embeds: [successEmbed('Playing the previous track.')] });
+        return interaction.editReply({ embeds: [successEmbed('⏮️ Playing the previous track.')] });
     }
 };

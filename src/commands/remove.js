@@ -1,28 +1,29 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 const { validatePlayerConnection } = require('../utils/helpers');
+const { getTrackTitle } = require('../utils/trackUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('remove')
         .setDescription('Remove a track from the queue.')
-        .addIntegerOption(option => 
+        .addIntegerOption(option =>
             option.setName('position')
                 .setDescription('The queue position of the track to remove')
                 .setRequired(true)
                 .setMinValue(1)
         ),
     async execute(interaction, client) {
-        const { player, error } = validatePlayerConnection(interaction, client);
+        const { player, error } = validatePlayerConnection(interaction, client, { requireCurrent: false });
         if (error) return interaction.reply(error);
 
         const position = interaction.options.getInteger('position');
-        if (position > player.queue.length) {
-            return interaction.reply({ embeds: [errorEmbed(`There are only ${player.queue.length} tracks in the queue.`)], ephemeral: true });
+        const result = await player.removeTrack(position);
+        if (!result.ok) {
+            return interaction.reply({ embeds: [errorEmbed(result.reason)], flags: 64 });
         }
 
-        const removed = player.queue.splice(position - 1, 1)[0];
-        
-        interaction.reply({ embeds: [successEmbed(`Removed **${removed.info.title}** from the queue.`)] });
+        const trackName = getTrackTitle(result.track);
+        return interaction.reply({ embeds: [successEmbed(`Removed **${trackName}** from the queue.`)] });
     }
 };

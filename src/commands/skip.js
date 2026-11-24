@@ -1,6 +1,7 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { successEmbed } = require('../utils/embedBuilder');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 const { validatePlayerConnection } = require('../utils/helpers');
+const { getTrackTitle } = require('../utils/trackUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -10,7 +11,11 @@ module.exports = {
         const { player, error } = validatePlayerConnection(interaction, client);
         if (error) return interaction.reply(error);
 
-        player.playNext();
-        interaction.reply({ embeds: [successEmbed('Track skipped.')] });
+        await interaction.deferReply();
+        const res = await player.skip();
+        if (!res.ok) {
+            return interaction.editReply({ embeds: [errorEmbed(res.reason)] });
+        }
+        return interaction.editReply({ embeds: [successEmbed(`⏭️ Skipped **${getTrackTitle(res.skipped)}**.`)] });
     }
 };

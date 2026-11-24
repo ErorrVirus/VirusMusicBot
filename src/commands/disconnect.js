@@ -10,7 +10,7 @@ module.exports = {
         const { player, error } = validatePlayerConnection(interaction, client, { requireCurrent: false });
         if (error) return interaction.reply(error);
 
-        player.destroy();
-        interaction.reply({ embeds: [successEmbed('Disconnected and cleared the queue.')] });
+        await player.destroy('Disconnect command');
+        return interaction.reply({ embeds: [successEmbed('👋 Disconnected and cleared the queue.')] });
     }
 };

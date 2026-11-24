@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { errorEmbed, successEmbed } = require('../utils/embedBuilder');
 const { validatePlayerConnection } = require('../utils/helpers');
 
@@ -7,18 +7,15 @@ module.exports = {
         .setName('shuffle')
         .setDescription('Shuffle the current queue.'),
     async execute(interaction, client) {
-        const { player, error } = validatePlayerConnection(interaction, client);
+        const { player, error } = validatePlayerConnection(interaction, client, { requireCurrent: false });
         if (error) return interaction.reply(error);
 
-        if (player.queue.length === 0) {
-            return interaction.reply({ embeds: [errorEmbed('There are no songs in the queue to shuffle.')], ephemeral: true });
+        if (player.queue.length < 2) {
+            return interaction.reply({ embeds: [errorEmbed('Need at least 2 songs in the queue to shuffle.')], flags: MessageFlags.Ephemeral });
         }
 
-        for (let i = player.queue.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [player.queue[i], player.queue[j]] = [player.queue[j], player.queue[i]];
-        }
-        
-        interaction.reply({ embeds: [successEmbed('Queue shuffled.')] });
+        const count = await player.shuffleQueue();
+        client.manager.scheduleNowPlayingRefresh(player);
+        return interaction.reply({ embeds: [successEmbed(`🔀 Shuffled **${count}** tracks in the queue.`)] });
     }
 };

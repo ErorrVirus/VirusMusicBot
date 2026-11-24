@@ -11,7 +11,7 @@ plugins:
     remoteCipher:
       url: "http://virusmusicbot_yt_cipher:8001"
     oauth:
-      enabled: true
+      enabled: ${YOUTUBE_OAUTH_ENABLED:false}
       skipInitialization: true
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
     clients:
@@ -48,20 +48,22 @@ plugins:
         videoLoading: true
   lavasrc:
     providers:
-      - 'ytsearch:"%ISRC%"'
+      - 'ytmsearch:"%ISRC%"'
+      - 'ytmsearch:%QUERY%'
       - 'ytsearch:%QUERY%'
       - 'scsearch:%QUERY%'
     sources:
-      spotify: true
+      spotify: ${LAVASRC_SPOTIFY_ENABLED:false}
       appleMusic: false
       deezer: false
       yandexMusic: false
       flowerytts: false
       youtube: false
     spotify:
-      clientId: ${SPOTIFY_CLIENT_ID}
-      clientSecret: ${SPOTIFY_CLIENT_SECRET}
-      spDc: ${SPOTIFY_SPDC}
+      clientId: ${SPOTIFY_CLIENT_ID:}
+      clientSecret: ${SPOTIFY_CLIENT_SECRET:}
+      spDc: ${SPOTIFY_SPDC:}
+      preferPartnerApi: true
       countryCode: US
       playlistLoadLimit: 6
       albumLoadLimit: 6
@@ -82,15 +84,16 @@ lavalink:
       soundcloud: true
       twitch: true
       vimeo: true
-      http: true
+      http: false   # Disabled: arbitrary HTTP streams bypass the bot's SSRF guard.
       local: false
     soundcloudFilterOutPreviewTracks: true
     bufferDurationMs: 400
-    frameBufferDurationMs: 1000
-    opusEncodingQuality: 10
+    frameBufferDurationMs: 5000
+    opusEncodingQuality: 8
     resamplingQuality: HIGH
-    trackStuckThresholdMs: 60000
+    trackStuckThresholdMs: 10000
     useSeekGhosting: true
+    playerUpdateInterval: 5
     filters:
       volume: true
       equalizer: true
@@ -101,7 +104,7 @@ lavalink:
       distortion: false
       rotation: false
       channelMix: false
-      lowPass: false
+      lowPass: true
     nonAllocating: true
 
 metrics:
@@ -118,12 +121,12 @@ logging:
     path: ./logs/
   level:
     root: INFO
-    lavalink: DEBUG
-    dev.lavalink.youtube: DEBUG
-    com.sedmelluq.discord.lavaplayer.tools.ExceptionTools: DEBUG
+    lavalink: INFO
+    dev.lavalink.youtube: INFO
+    com.sedmelluq.discord.lavaplayer.tools.ExceptionTools: WARN
   request:
-    enabled: true
-    includeClientInfo: true
+    enabled: false
+    includeClientInfo: false
     includeHeaders: false
-    includeQueryString: true
-    includePayload: true
+    includeQueryString: false
+    includePayload: false

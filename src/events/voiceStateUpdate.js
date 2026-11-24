@@ -1,20 +1,33 @@
 const { Events } = require('discord.js');
+const logger = require('../utils/logger');
 
 module.exports = {
     name: Events.VoiceStateUpdate,
-    execute(oldState, newState, client) {
-        console.log(`[voiceStateUpdate] Triggered for user: ${oldState.id}, oldChannel: ${oldState.channelId}, newChannel: ${newState.channelId}`);
-        // Check if the bot was the one who got disconnected
-        if (oldState.id === client.user.id && oldState.channelId && !newState.channelId) {
-            console.log(`[voiceStateUpdate] Bot was disconnected manually!`);
-            const player = client.manager.getPlayer(oldState.guild.id);
-            if (player) {
-                console.log(`[voiceStateUpdate] Found player for guild ${oldState.guild.id}. Destroying it...`);
-                // The bot was disconnected manually! Destroy the player to stop the loop and embeds.
-                player.destroy('Manual disconnect by user via Discord UI');
-            } else {
-                console.log(`[voiceStateUpdate] No player found for guild ${oldState.guild.id}.`);
-            }
+    async execute(oldState, newState, client) {
+        if (!client.user || oldState.id !== client.user.id) return;
+
+        const guildId = oldState.guild.id;
+        const player = client.manager?.getPlayer(guildId);
+        if (!player || player.isDestroyed()) return;
+
+        // Bot was disconnected from voice channel (manually kicked or disconnected)
+        if (oldState.channelId && !newState.channelId) {
+            logger.info('VoiceState', 'Bot manually disconnected from voice channel; destroying player', {
+                guildId,
+                oldChannelId: oldState.channelId
+            });
+            await player.destroy('Manual disconnect by user via Discord UI');
+            return;
+        }
+
+        // Bot was moved to a different voice channel
+        if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
+            logger.info('VoiceState', 'Bot moved to a different voice channel', {
+                guildId,
+                from: oldState.channelId,
+                to: newState.channelId
+            });
+            player.voiceId = newState.channelId;
         }
     }
 };

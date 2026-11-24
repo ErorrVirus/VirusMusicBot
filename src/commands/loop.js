@@ -6,7 +6,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('loop')
         .setDescription('Toggle repeat mode.')
-        .addStringOption(option => 
+        .addStringOption(option =>
             option.setName('mode')
                 .setDescription('The loop mode')
                 .setRequired(true)
@@ -17,12 +17,13 @@ module.exports = {
                 )
         ),
     async execute(interaction, client) {
-        const { player, error } = validatePlayerConnection(interaction, client);
+        const { player, error } = validatePlayerConnection(interaction, client, { requireCurrent: false });
         if (error) return interaction.reply(error);
 
         const mode = interaction.options.getString('mode');
-        player.loop = mode;
-        
-        interaction.reply({ embeds: [successEmbed(`Loop mode set to **${mode}**.`)] });
+        await player.setLoop(mode);
+        client.manager.scheduleNowPlayingRefresh(player);
+
+        return interaction.reply({ embeds: [successEmbed(`🔁 Loop mode set to **${mode}**.`)] });
     }
 };
